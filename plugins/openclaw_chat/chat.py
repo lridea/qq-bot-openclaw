@@ -138,6 +138,7 @@ async def handle_help():
 • /chat + 消息：与我对话
 • /hello 或 /你好：打招呼
 • /help 或 /帮助：显示此帮助
+• /model：查看当前使用的 AI 模型
 
 【功能列表】
 ✅ 日常对话
@@ -152,7 +153,67 @@ async def handle_help():
 • 不要发送垃圾信息
 • 复杂任务可能需要较长时间
 
-【版本】v1.0.0
+【版本】v1.2.0
 【作者】OpenClaw
     """.strip()
     await help_cmd.send(help_text)
+
+
+# 模型信息命令
+model_cmd = on_command("model", aliases={"模型", "当前模型"}, priority=3)
+
+
+@model_cmd.handle()
+async def handle_model():
+    """显示当前使用的模型信息"""
+    from .ai_processor import MODEL_CONFIGS, list_available_models
+    
+    # 获取当前模型配置
+    model_id = config.ai_model
+    model_config = MODEL_CONFIGS.get(model_id)
+    
+    if not model_config:
+        await model_cmd.send(f"❌ 当前模型配置无效：{model_id}")
+        return
+    
+    # 构建模型信息
+    info = f"""🦞 当前 AI 模型信息
+
+【模型】{model_config['name']} ({model_id})
+【描述】{model_config['description']}
+【默认模型】{model_config['default_model']}
+【可用模型】{', '.join(model_config['models'])}"""
+
+    # 添加免费信息
+    if model_config['free_tier']:
+        info += f"\n【免费】✅ 是"
+        if model_config.get('free_quota'):
+            info += f"\n【额度】{model_config['free_quota']}"
+    else:
+        info += f"\n【免费】❌ 否（需要付费）"
+    
+    # 检查 API Key 是否配置
+    has_key = bool(config.current_api_key)
+    if model_config['env_key']:
+        if has_key:
+            info += f"\n【API Key】✅ 已配置"
+        else:
+            info += f"\n【API Key】❌ 未配置"
+    
+    info += "\n\n【切换模型】修改 .env 文件中的 AI_MODEL 配置"
+    info += "\n【查看所有模型】使用 /models 命令"
+    
+    await model_cmd.send(info)
+
+
+# 所有模型命令
+models_cmd = on_command("models", aliases={"所有模型", "模型列表"}, priority=3)
+
+
+@models_cmd.handle()
+async def handle_models():
+    """显示所有支持的模型"""
+    from .ai_processor import list_available_models
+    
+    models_info = list_available_models()
+    await models_cmd.send(models_info)
