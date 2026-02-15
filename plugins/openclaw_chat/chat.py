@@ -58,7 +58,8 @@ async def handle_chat(bot: Bot, event: Event):
             user_id=user_id,
             context="qq_group" if group_id else "qq_private",
             group_id=group_id,
-            api_key=config.openclaw_api_key  # 使用配置中的 API Key
+            model=config.ai_model,  # 使用配置的模型
+            api_key=config.current_api_key  # 使用配置的 API Key
         )
         
         # 发送回复
@@ -100,7 +101,8 @@ async def handle_chat_cmd(bot: Bot, event: Event, args: Message = CommandArg()):
             user_id=user_id,
             context="qq_group" if group_id else "qq_private",
             group_id=group_id,
-            api_key=config.openclaw_api_key
+            model=config.ai_model,
+            api_key=config.current_api_key
         )
         
         # 发送回复
