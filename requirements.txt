@@ -1,0 +1,23 @@
+# NoneBot2 核心
+nonebot2>=2.0.0
+
+# OneBot 适配器（用于连接 QQ）
+nonebot-adapter-onebot>=2.0.0
+
+# HTTP 客户端（用于调用 OpenClaw API）
+httpx>=0.24.0
+
+# 异步支持
+aiohttp>=3.8.0
+
+# 配置文件解析
+python-dotenv>=1.0.0
+
+# 日志增强
+loguru>=0.7.0
+
+# 数据验证
+pydantic>=2.0.0
+
+# Windows 兼容性
+pywin32>=305; sys_platform == 'win32'
