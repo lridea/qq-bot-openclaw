@@ -14,7 +14,9 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 初始化 NoneBot
-nonebot.init()
+nonebot.init(
+    session_expire_timeout=120
+)
 
 # 注册适配器
 driver = nonebot.get_driver()

@@ -10,6 +10,7 @@ ENV/
 *.egg-info/
 dist/
 build/
+runtime/
 
 # 环境配置（不提交敏感信息）
 .env

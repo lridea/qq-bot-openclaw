@@ -36,8 +36,8 @@ class Config(BaseModel):
     log_file: str = os.getenv("LOG_FILE", "")
     
     # 高级配置
-    command_start: List[str] = eval(os.getenv("COMMAND_START", "[\"/\", \"\"]"))
-    command_sep: List[str] = eval(os.getenv("COMMAND_SEP", "[\".\"]"))
+    command_start: List[str] = eval(os.getenv("COMMAND_START", '["/", ""]'))
+    command_sep: List[str] = eval(os.getenv("COMMAND_SEP", '[\".\"]'))
     session_expire_timeout: int = int(os.getenv("SESSION_EXPIRE_TIMEOUT", "120"))
     
     @property
@@ -47,18 +47,22 @@ class Config(BaseModel):
     
     def validate_config(self) -> bool:
         """验证配置是否完整"""
-        if not self.openclaw_api_url or "your-server.com" in self.openclaw_api_url:
-            print("❌ 错误: 未配置 OPENCLAW_API_URL")
+        try:
+            if not self.openclaw_api_url or "your-server.com" in self.openclaw_api_url:
+                print("错误: 未配置 OPENCLAW_API_URL")
+                return False
+            
+            if not self.openclaw_api_key or self.openclaw_api_key == "your_api_key_here":
+                print("错误: 未配置 OPENCLAW_API_KEY")
+                return False
+            
+            if not self.superusers:
+                print("警告: 未配置超级管理员")
+            
+            return True
+        except Exception as e:
+            print(f"验证配置时出错: {e}")
             return False
-        
-        if not self.openclaw_api_key or self.openclaw_api_key == "your_api_key_here":
-            print("❌ 错误: 未配置 OPENCLAW_API_KEY")
-            return False
-        
-        if not self.superusers:
-            print("⚠️  警告: 未配置超级管理员")
-        
-        return True
 
 
 # 创建全局配置实例
@@ -68,3 +72,4 @@ config = Config()
 if not config.validate_config():
     print("\n请检查 .env 配置文件！")
     print("参考 .env.example 进行配置")
+    # 不退出程序，只打印警告信息

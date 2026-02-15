@@ -1,27 +1,27 @@
-# NoneBot2 核心
+﻿# NoneBot2 鏍稿績
 nonebot2[fastapi]>=2.0.0
 
-# OneBot 适配器（用于连接 QQ）
+# OneBot 閫傞厤鍣紙鐢ㄤ簬杩炴帴 QQ锛?
 nonebot-adapter-onebot>=2.0.0
 
-# HTTP 客户端（用于调用 OpenClaw API）
+# HTTP 瀹㈡埛绔紙鐢ㄤ簬璋冪敤 OpenClaw API锛?
 httpx>=0.24.0
 
-# 异步支持
+# 寮傛鏀寔
 aiohttp>=3.8.0
 
-# 配置文件解析
+# 閰嶇疆鏂囦欢瑙ｆ瀽
 python-dotenv>=1.0.0
 
-# 日志增强
+# 鏃ュ織澧炲己
 loguru>=0.7.0
 
-# 数据验证
+# 鏁版嵁楠岃瘉
 pydantic>=2.0.0
 
-# FastAPI 依赖（NoneBot 需要）
+# FastAPI 渚濊禆锛圢oneBot 闇€瑕侊級
 fastapi>=0.100.0
 uvicorn>=0.23.0
 
-# Windows 兼容性
+# Windows 鍏煎鎬?
 pywin32>=305; sys_platform == 'win32'
