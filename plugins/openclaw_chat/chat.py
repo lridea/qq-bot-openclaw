@@ -120,7 +120,7 @@ welcome = on_command("hello", aliases={"你好", "hi"}, priority=3)
 @welcome.handle()
 async def handle_welcome():
     """处理欢迎消息"""
-    await welcome.send(f"你好！我是 {config.bot_name}，很高兴见到你！\n你可以 @我 与我对话，或者使用 /chat 命令。")
+    await welcome.send(f"呜哇~ 主人你好呀！我是{config.bot_name}小龙虾！✨🦞✨\n\n诶嘿嘿~ 小龙虾很高兴见到主人！有什么想和小虾虾聊的吗？💕")
 
 
 # 帮助命令
@@ -131,30 +131,28 @@ help_cmd = on_command("help", aliases={"帮助"}, priority=3)
 async def handle_help():
     """显示帮助信息"""
     help_text = f"""
-🦞 {config.bot_name} 使用指南
+🦞 {config.bot_name}小龙虾的使用指南 ✨
 
 【基本用法】
-• @我 + 消息：与我对话
-• /chat + 消息：与我对话
+• @我 + 消息：和小龙虾聊天
+• /chat + 消息：用命令聊天
 • /hello 或 /你好：打招呼
-• /help 或 /帮助：显示此帮助
-• /model：查看当前使用的 AI 模型
+• /help 或 /帮助：显示这个帮助
+• /model：查看小龙虾用的模型
 
 【功能列表】
-✅ 日常对话
-✅ 回答问题
-✅ 文件读取
-✅ 命令执行
-✅ 数据分析
-✅ 编程帮助
+✅ 日常聊天陪主人
+✅ 回答各种问题
+✅ 卖萌和撒娇
+✅ 治愈主人的心
 
 【注意事项】
-• 请友善使用
-• 不要发送垃圾信息
-• 复杂任务可能需要较长时间
+• 小龙虾会一直元气满满地陪主人哦~
+• 不要欺负小虾虾...（虽然偶尔也喜欢~）
+• 有什么不开心的可以和小虾虾说
 
 【版本】v1.2.0
-【作者】OpenClaw
+【身份】小龙虾美少女 🦞💕
     """.strip()
     await help_cmd.send(help_text)
 
