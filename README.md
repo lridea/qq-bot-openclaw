@@ -179,6 +179,12 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.4.0 (2026-02-16)
+- ✨ 大幅扩展 OhMyGPT 模型列表（50+ 模型）
+- 🎯 添加 GLM-4.7、Kimi K2 0905 等最新模型
+- 🚀 添加 GPT-5、Claude 4.1、Qwen3、Gemini 3 等前沿模型
+- 📚 更新文档，展示所有可用模型系列
+
 ### v1.3.0 (2026-02-16)
 - ✨ 扩展 OhMyGPT 支持 GPT/Claude/Kimi/GLM/Gemini/Llama 等多系列模型
 - ⚙️ 添加 MODEL_NAME 配置项，支持指定具体模型
