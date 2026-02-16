@@ -1,0 +1,22 @@
+{
+  "123456789": {
+    "trigger_config": {
+      "enabled": true,
+      "require_mention": false,
+      "mention_patterns": [
+        "[？?]",
+        "(有人|谁|怎么|如何|为什么|求|帮|解答|请教)",
+        "(@机器人|@[Aa][Uu][Tt][Oo]|@[Bb][Oo][Tt])"
+      ],
+      "history_limit": 20
+    }
+  },
+  "987654321": {
+    "trigger_config": {
+      "enabled": false,
+      "require_mention": true,
+      "mention_patterns": [],
+      "history_limit": 10
+    }
+  }
+}

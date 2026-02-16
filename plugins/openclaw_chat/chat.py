@@ -3,6 +3,7 @@
 """
 OpenClaw 聊天插件核心代码
 处理 QQ 群消息并调用本地 AI 处理
+支持智能触发模式
 """
 
 from nonebot import on_message, on_command
@@ -19,10 +20,15 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import config
 from .ai_processor import process_message_with_ai
+from .intelligent_trigger import create_trigger_from_config, IntelligentTrigger
 
 
 # 创建消息处理器（响应 @机器人）
 chat = on_message(rule=to_me(), priority=1, block=True)
+
+# 创建智能触发消息处理器（群聊自动检测触发）
+# 注意：这个处理器不会阻塞，让其他处理器也有机会处理
+intelligent_chat = on_message(priority=5, block=False)
 
 # 创建命令处理器（响应 /chat 命令）
 chat_cmd = on_command("chat", aliases={"对话", "聊天"}, priority=2, block=True)
@@ -405,6 +411,14 @@ async def handle_admin_help():
   • /set_model gpt-4o-mini - 设置为 GPT-4o-mini
   • /set_model glm-4.7 - 设置为 GLM-4.7
 
+【智能触发管理】
+• /trigger_status 或 /触发状态 - 查看智能触发配置
+• /trigger_enable 或 /触发启用 <群号> - 启用群智能触发
+• /trigger_disable 或 /触发禁用 <群号> - 禁用群智能触发
+• /trigger_set 或 /触发设置 <群号> - 设置群触发模式
+• /trigger_reset 或 /触发重置 <群号> - 重置群为默认配置
+• /trigger_list 或 /触发列表 - 查看所有群配置
+
 【信息查询】
 • /models - 查看所有可用模型
 • /model - 查看当前模型信息
@@ -416,5 +430,281 @@ async def handle_admin_help():
 💡 提示：使用 /help 查看所有命令
 """
     await admin_help_cmd.send(help_text)
+
+
+# ========== 智能触发功能 ==========
+
+@intelligent_chat.handle()
+async def handle_intelligent_chat(bot: Bot, event: Event):
+    """
+    处理群消息的智能触发（自动检测疑问和求助）
+    """
+    try:
+        # 只处理群聊消息
+        if not hasattr(event, "group_id"):
+            return
+        
+        group_id = str(event.group_id)
+        message = str(event.get_message()).strip()
+        user_id = event.get_user_id()
+        
+        # 过滤空消息和命令
+        if not message or message.startswith(('/', '.', '。', '！', '!')):
+            return
+        
+        # 获取群组的智能触发配置
+        trigger_config = config.get_group_trigger_config(group_id)
+        
+        # 检查是否启用智能触发
+        if not trigger_config.enabled:
+            return
+        
+        # 检查是否需要强制@
+        if trigger_config.require_mention:
+            # 如果强制要求@，则不处理（已有 to_me 处理器处理@）
+            return
+        
+        # 创建触发检测器
+        trigger_detector = IntelligentTrigger(trigger_config.mention_patterns)
+        
+        # 检查是否触发
+        if not trigger_detector.check_trigger(message):
+            return
+        
+        # 记录日志
+        logger.info(f"🎯 智能触发 (群: {group_id}, 用户: {user_id}): {message[:50]}")
+        
+        # 检查是否有图片
+        from .image_processor import extract_image_from_message
+        from .vision_client import VisionAIClient
+        
+        image_data = await extract_image_from_message(bot, event)
+        
+        if image_data and image_data.has_data():
+            # 有图片，使用 Vision AI 识别
+            logger.info("📸 检测到图片，启动 Vision AI 识别...")
+            
+            vision_model = config.model_name or "gpt-4o-mini"
+            vision_client = VisionAIClient(
+                api_key=config.current_api_key,
+                provider=config.ai_model,
+                base_url=None
+            )
+            
+            prompt = f"请识别这张图片，并结合用户的问题回答：{message}" if message else "请描述这张图片的内容"
+            reply = await vision_client.recognize_image(
+                image_data=image_data,
+                prompt=prompt,
+                model=vision_model
+            )
+            
+            await intelligent_chat.send(reply)
+            return
+        
+        # 普通文本对话
+        reply = await process_message_with_ai(
+            message=message,
+            user_id=user_id,
+            context="qq_group_intelligent",  # 使用智能触发上下文
+            group_id=group_id,
+            model=config.ai_model,
+            model_name=config.model_name if config.model_name else None,
+            api_key=config.current_api_key,
+            history_limit=trigger_config.history_limit
+        )
+        
+        # 发送回复
+        await intelligent_chat.send(reply)
+        
+    except Exception as e:
+        logger.error(f"智能触发处理失败: {e}")
+
+
+# ========== 智能触发管理命令 ==========
+
+# 智能触发状态命令
+trigger_status_cmd = on_command("trigger_status", aliases={"触发状态", "智能触发状态"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_status_cmd.handle()
+async def handle_trigger_status():
+    """显示智能触发状态（仅超级管理员）"""
+    # 获取群号
+    # 注意：超级管理员可以在群里使用此命令查看当前群的配置
+    
+    text = f"""✨ 智能触发配置 💙
+
+【全局默认配置】
+• 启用状态：{'✅ 启用' if config.intelligent_trigger_enabled else '❌ 禁用'}
+• 是否强制@：{'✅ 是' if config.intelligent_trigger_require_mention else '❌ 否'}
+• 历史上下文：{config.intelligent_trigger_history_limit} 条消息
+
+【触发模式】
+• {chr(10).join([f'• {p}' for p in config.intelligent_trigger_patterns])}
+
+【群组配置】
+• 已配置群组数量：{len(config._group_configs)} 个
+
+💡 提示：使用 /trigger_list 查看所有群组配置
+"""
+    await trigger_status_cmd.send(text)
+
+
+# 智能触发启用命令
+trigger_enable_cmd = on_command("trigger_enable", aliases={"触发启用", "启用触发"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_enable_cmd.handle()
+async def handle_trigger_enable(args: Message = CommandArg()):
+    """启用群的智能触发（仅超级管理员）"""
+    # 获取群号参数
+    group_id = str(args).strip()
+    
+    if not group_id:
+        await trigger_enable_cmd.send("❌ 请指定群号\n\n例如：/trigger_enable 123456789")
+        return
+    
+    # 获取当前群配置
+    trigger_config = config.get_group_trigger_config(group_id)
+    trigger_config.enabled = True
+    
+    # 保存配置
+    config.set_group_trigger_config(group_id, trigger_config)
+    
+    await trigger_enable_cmd.send(f"✅ 已启用群 {group_id} 的智能触发\n\n✨ 已生效 💙")
+
+
+# 智能触发禁用命令
+trigger_disable_cmd = on_command("trigger_disable", aliases={"触发禁用", "禁用触发"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_disable_cmd.handle()
+async def handle_trigger_disable(args: Message = CommandArg()):
+    """禁用群的智能触发（仅超级管理员）"""
+    # 获取群号参数
+    group_id = str(args).strip()
+    
+    if not group_id:
+        await trigger_disable_cmd.send("❌ 请指定群号\n\n例如：/trigger_disable 123456789")
+        return
+    
+    # 获取当前群配置
+    trigger_config = config.get_group_trigger_config(group_id)
+    trigger_config.enabled = False
+    
+    # 保存配置
+    config.set_group_trigger_config(group_id, trigger_config)
+    
+    await trigger_disable_cmd.send(f"❌ 已禁用群 {group_id} 的智能触发\n\n✨ 已生效 💙")
+
+
+# 智能触发设置命令
+trigger_set_cmd = on_command("trigger_set", aliases={"触发设置", "设置触发"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_set_cmd.handle()
+async def handle_trigger_set(args: Message = CommandArg()):
+    """设置群的智能触发（仅超级管理员）"""
+    # 获取参数
+    arg_str = str(args).strip()
+    
+    if not arg_str:
+        await trigger_set_cmd.send(
+            "❌ 请指定群号和设置\n\n"
+            "格式：/trigger_set <群号> <启用/禁用> [强制@:是/否]\n\n"
+            "例如：\n"
+            "  /trigger_set 123456789 启用\n"
+            "  /trigger_set 123456789 禁用\n"
+            "  /trigger_set 123456789 启用 是  # 强制要求@"
+        )
+        return
+    
+    # 解析参数
+    parts = arg_str.split()
+    if len(parts) < 2:
+        await trigger_set_cmd.send("❌ 参数不完整\n\n格式：/trigger_set <群号> <启用/禁用> [强制@:是/否]")
+        return
+    
+    group_id = parts[0]
+    enable = parts[1]
+    
+    # 验证启用/禁用参数
+    if enable not in ["启用", "禁用"]:
+        await trigger_set_cmd.send("❌ 启用/禁用参数无效\n\n请使用：启用 或 禁用")
+        return
+    
+    # 解析强制@参数
+    require_mention = False
+    if len(parts) >= 3:
+        if parts[2] in ["是", "yes", "true"]:
+            require_mention = True
+    
+    # 创建触发配置
+    trigger_config = config.get_group_trigger_config(group_id)
+    trigger_config.enabled = (enable == "启用")
+    trigger_config.require_mention = require_mention
+    
+    # 保存配置
+    config.set_group_trigger_config(group_id, trigger_config)
+    
+    status_text = "启用" if trigger_config.enabled else "禁用"
+    mention_text = "（强制@）" if trigger_config.require_mention else ""
+    
+    await trigger_set_cmd.send(f"✅ 已设置群 {group_id}：{status_text}智能触发 {mention_text}\n\n✨ 已生效 💙")
+
+
+# 智能触发重置命令
+trigger_reset_cmd = on_command("trigger_reset", aliases={"触发重置", "重置触发"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_reset_cmd.handle()
+async def handle_trigger_reset(args: Message = CommandArg()):
+    """重置群为默认配置（仅超级管理员）"""
+    # 获取群号参数
+    group_id = str(args).strip()
+    
+    if not group_id:
+        await trigger_reset_cmd.send("❌ 请指定群号\n\n例如：/trigger_reset 123456789")
+        return
+    
+    # 移除群配置（恢复默认）
+    config.remove_group_config(group_id)
+    
+    # 显示默认配置
+    default_config = config.get_group_trigger_config(group_id)
+    status_text = "启用" if default_config.enabled else "禁用"
+    
+    await trigger_reset_cmd.send(f"✅ 已重置群 {group_id} 为默认配置\n\n• 启用状态：{status_text}\n• 强制@：{'是' if default_config.require_mention else '否'}\n\n✨ 已生效 💙")
+
+
+# 智能触发列表命令
+trigger_list_cmd = on_command("trigger_list", aliases={"触发列表", "群触发列表"}, priority=1, permission=SUPERUSER)
+
+
+@trigger_list_cmd.handle()
+async def handle_trigger_list():
+    """显示所有群的智能触发配置（仅超级管理员）"""
+    if not config._group_configs:
+        await trigger_list_cmd.send("📝 当前没有配置群组\n\n所有群使用默认配置\n\n使用 /trigger_status 查看默认配置")
+        return
+    
+    text = "✨ 群组智能触发配置列表 💙\n\n"
+    
+    for group_id, group_config in config._group_configs.items():
+        trigger_config = group_config.trigger_config
+        
+        if trigger_config:
+            status_text = "✅ 启用" if trigger_config.enabled else "❌ 禁用"
+            mention_text = "（强制@）" if trigger_config.require_mention else ""
+            
+            text += f"【群 {group_id}】\n"
+            text += f"• 状态：{status_text}\n"
+            text += f"• 规则：{mention_text}\n"
+            text += f"• 模式：{', '.join(trigger_config.mention_patterns[:2])}...\n\n"
+    
+    text += f"\n💡 提示：使用 /trigger_reset <群号> 恢复默认配置"
+    
+    await trigger_list_cmd.send(text)
+
 
 

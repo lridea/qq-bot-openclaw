@@ -9,6 +9,9 @@
 - ✅ 支持文件访问、命令执行（通过 OpenClaw API）
 - ✅ 支持 Windows/Linux/Mac 跨平台运行
 - ✅ 完整的部署文档和启动脚本
+- ✅ **智能触发模式**：自动检测群中的疑问和求助，主动回复
+- ✅ **群组定制配置**：不同群聊可设置不同的触发规则
+- ✅ **超级管理员控制**：灵活管理智能触发功能
 
 ## 📋 系统要求
 
@@ -106,14 +109,68 @@ qq-bot-openclaw/
 │   ├── __init__.py
 │   └── openclaw_chat/      # OpenClaw 聊天插件
 │       ├── __init__.py
-│       └── chat.py
+│       ├── chat.py         # 聊天处理器（含智能触发）
+│       ├── intelligent_trigger.py  # 智能触发检测模块
+│       ├── ai_processor.py # AI 处理模块
+│       ├── image_processor.py  # 图片处理模块
+│       └── vision_client.py # Vision AI 客户端
+├── group_configs.json      # 群组智能触发配置（自动生成）
+├── group_configs.example.json  # 群组配置示例
 └── docs/                   # 文档目录
     ├── DEPLOYMENT.md       # 详细部署指南
     ├── NAPCAT.md           # NapCat 配置指南
-    └── FAQ.md              # 常见问题
+    ├── INTELLIGENT_TRIGGER.md  # 智能触发详细文档
+    ├── INTELLIGENT_TRIGGER_TEST.md  # 智能触发测试指南
+    ├── FAQ.md              # 常见问题
+    ├── IMAGE_RECOGNITION_DEV.md    # 图片识别开发记录
+    └── MULTI_MODEL.md      # 多模型配置文档
 ```
 
 ## 🔧 配置说明
+
+### 智能触发模式 ⭐ 新功能
+
+机器人可以自动检测群中的疑问和求助，并主动回复，无需 @机器人。
+
+**默认触发条件：**
+- 包含问号（？或?）
+- 包含疑问词：有人、谁、怎么、如何、为什么
+- 包含求助词：求、帮、解答、请教
+- 显式触发：@机器人、@AUTO、@BOT
+
+**环境变量配置（.env 文件）：**
+
+```ini
+# ========== 智能触发配置 ==========
+# 是否启用智能触发模式（true/false）
+INTELLIGENT_TRIGGER_ENABLED=true
+
+# 是否强制要求 @ 机器人（true/false）
+INTELLIGENT_TRIGGER_REQUIRE_MENTION=false
+
+# 触发模式（正则表达式列表）
+INTELLIGENT_TRIGGER_PATTERNS=["[？?]", "(有人|谁|怎么|如何|为什么|求|帮|解答|请教)", "(@机器人|@[Aa][Uu][Tt][Oo]|@[Bb][Oo][Tt])"]
+
+# 查看最近多少条消息作为上下文
+INTELLIGENT_TRIGGER_HISTORY_LIMIT=20
+
+# 群组配置文件路径
+GROUP_CONFIG_FILE=group_configs.json
+```
+
+**测试示例：**
+```
+# 会触发（智能回复）
+这个问题怎么解决？
+有人知道吗？
+求解答
+@机器人 帮忙看下
+
+# 不会触发
+今天天气不错
+大家吃饭了吗？
+哈喽
+```
 
 ### 超级管理员配置
 
@@ -128,13 +185,25 @@ qq-bot-openclaw/
 | `/set_model <模型名>` | 设置具体的 AI 模型（如 gpt-4o-mini）|
 | `/restart` | 重启机器人 |
 | `/admin` | 查看管理员帮助 |
+| `/trigger_status` | 查看智能触发配置 |
+| `/trigger_enable <群号>` | 启用群的智能触发 |
+| `/trigger_disable <群号>` | 禁用群的智能触发 |
+| `/trigger_set <群号> <启用/禁用> [强制@]` | 设置群触发规则 |
+| `/trigger_reset <群号>` | 重置群为默认配置 |
+| `/trigger_list` | 查看所有群配置 |
 
 **使用示例：**
 ```
-/status                # 查看系统状态
-/switch deepseek       # 切换到 DeepSeek
-/set_model gpt-4o-mini  # 设置为 GPT-4o-mini
-/restart              # 重启机器人
+/status                        # 查看系统状态
+/switch deepseek               # 切换到 DeepSeek
+/set_model gpt-4o-mini         # 设置为 GPT-4o-mini
+/restart                       # 重启机器人
+/trigger_status                # 查看智能触发配置
+/trigger_enable 123456789       # 启用群的智能触发
+/trigger_disable 123456789      # 禁用群的智能触发
+/trigger_set 123456789 启用 是  # 启用并强制@
+/trigger_reset 123456789       # 重置为默认配置
+/trigger_list                  # 查看所有群配置
 ```
 
 ### OpenClaw API 配置
@@ -156,7 +225,11 @@ qq-bot-openclaw/
 
 - [部署指南](docs/DEPLOYMENT.md) - 详细的部署步骤
 - [NapCat 配置](docs/NAPCAT.md) - NapCat 协议端配置
+- [智能触发功能](docs/INTELLIGENT_TRIGGER.md) - 智能触发详细文档 ⭐
+- [智能触发测试](docs/INTELLIGENT_TRIGGER_TEST.md) - 智能触发测试指南 ⭐
 - [常见问题](docs/FAQ.md) - 常见问题解答
+- [多模型配置](docs/MULTI_MODEL.md) - 多模型支持文档
+- [图片识别开发](docs/IMAGE_RECOGNITION_DEV.md) - 图片识别功能开发记录
 
 ## ⚙️ 高级功能
 
@@ -200,6 +273,16 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 检查是否在群里 @机器人，或者私聊机器人。
 
 ## 📝 更新日志
+
+### v1.8.0 (2026-02-16) ⭐ 智能触发功能
+- 🎯 添加智能触发模式：自动检测群中的疑问和求助，主动回复
+- 🔧 支持群组定制配置：不同群聊可设置不同的触发规则
+- 🛡️ 超级管理员控制：灵活管理智能触发功能
+- 📝 创建智能触发检测模块（intelligent_trigger.py）
+- 📚 创建详细的智能触发文档和测试指南
+- ✨ 支持正则表达式触发模式（疑问句、求助词、显式触发）
+- 📊 支持查看群组配置列表和状态
+- 🔄 支持动态启用/禁用群组智能触发
 
 ### v1.7.0 (2026-02-16)
 - 📸 添加图片识别功能（Vision AI）

@@ -2,16 +2,34 @@
 # -*- coding: utf-8 -*-
 """
 配置文件
-从环境变量加载配置（支持多模型）
+从环境变量加载配置（支持多模型 + 智能触发）
 """
 
 import os
-from typing import List, Optional
+import json
+from typing import List, Optional, Dict
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # 加载 .env 文件
 load_dotenv()
+
+
+class IntelligentTriggerConfig(BaseModel):
+    """智能触发配置"""
+    enabled: bool = True  # 是否启用智能触发
+    require_mention: bool = False  # 是否强制要求@
+    mention_patterns: List[str] = [  # 触发模式（正则表达式）
+        "[？?]",  # 包含问号
+        "(有人|谁|怎么|如何|为什么|求|帮|解答|请教)",  # 疑问/求助词
+        "(@机器人|@[Aa][Uu][Tt][Oo]|@[Bb][Oo][Tt])"  # 显式触发
+    ]
+    history_limit: int = 20  # 查看最近多少条消息作为上下文
+
+
+class GroupConfig(BaseModel):
+    """群组配置"""
+    trigger_config: Optional[IntelligentTriggerConfig] = None  # 该群的智能触发配置（覆盖默认）
 
 
 class Config(BaseModel):
@@ -63,6 +81,70 @@ class Config(BaseModel):
     command_sep: List[str] = eval(os.getenv("COMMAND_SEP", '[\".\"]'))
     session_expire_timeout: int = int(os.getenv("SESSION_EXPIRE_TIMEOUT", "120"))
     
+    # ========== 智能触发配置 ==========
+    intelligent_trigger_enabled: bool = os.getenv("INTELLIGENT_TRIGGER_ENABLED", "true").lower() == "true"
+    intelligent_trigger_require_mention: bool = os.getenv("INTELLIGENT_TRIGGER_REQUIRE_MENTION", "false").lower() == "true"
+    intelligent_trigger_patterns: List[str] = eval(os.getenv("INTELLIGENT_TRIGGER_PATTERNS", '["[？?]", "(有人|谁|怎么|如何|为什么|求|帮|解答|请教)", "(@机器人|@[Aa][Uu][Tt][Oo]|@[Bb][Oo][Tt])"]'))
+    intelligent_trigger_history_limit: int = int(os.getenv("INTELLIGENT_TRIGGER_HISTORY_LIMIT", "20"))
+    
+    # 群组配置文件路径
+    group_config_file: str = os.getenv("GROUP_CONFIG_FILE", "group_configs.json")
+    
+    # 群组配置（运行时加载）
+    _group_configs: Dict[str, GroupConfig] = {}
+    
+    def load_group_configs(self):
+        """从文件加载群组配置"""
+        try:
+            if os.path.exists(self.group_config_file):
+                with open(self.group_config_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self._group_configs = {
+                        group_id: GroupConfig(**config_data)
+                        for group_id, config_data in data.items()
+                    }
+        except Exception as e:
+            print(f"⚠️  加载群组配置失败: {e}")
+            self._group_configs = {}
+    
+    def save_group_configs(self):
+        """保存群组配置到文件"""
+        try:
+            with open(self.group_config_file, 'w', encoding='utf-8') as f:
+                data = {
+                    group_id: config.dict()
+                    for group_id, config in self._group_configs.items()
+                }
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️  保存群组配置失败: {e}")
+    
+    def get_group_trigger_config(self, group_id: str) -> IntelligentTriggerConfig:
+        """获取群组的智能触发配置（如果未配置则使用默认配置）"""
+        if group_id in self._group_configs and self._group_configs[group_id].trigger_config:
+            return self._group_configs[group_id].trigger_config
+        
+        # 返回默认配置
+        return IntelligentTriggerConfig(
+            enabled=self.intelligent_trigger_enabled,
+            require_mention=self.intelligent_trigger_require_mention,
+            mention_patterns=self.intelligent_trigger_patterns,
+            history_limit=self.intelligent_trigger_history_limit
+        )
+    
+    def set_group_trigger_config(self, group_id: str, trigger_config: IntelligentTriggerConfig):
+        """设置群组的智能触发配置"""
+        if group_id not in self._group_configs:
+            self._group_configs[group_id] = GroupConfig()
+        self._group_configs[group_id].trigger_config = trigger_config
+        self.save_group_configs()
+    
+    def remove_group_config(self, group_id: str):
+        """移除群组配置（恢复默认）"""
+        if group_id in self._group_configs:
+            del self._group_configs[group_id]
+            self.save_group_configs()
+    
     @property
     def bot_name(self) -> str:
         """机器人名称"""
@@ -108,6 +190,17 @@ class Config(BaseModel):
         
         if not self.superusers:
             print("⚠️  警告: 未配置超级管理员")
+        
+        # 加载群组配置
+        self.load_group_configs()
+        
+        # 打印智能触发配置
+        if self.intelligent_trigger_enabled:
+            print("✅ 智能触发模式已启用")
+            print(f"   • 触发模式: {', '.join(self.intelligent_trigger_patterns[:2])}...")
+            print(f"   • 历史上下文: {self.intelligent_trigger_history_limit} 条消息")
+        else:
+            print("⚠️  智能触发模式已禁用")
         
         return True  # 允许没有配置的情况下使用回退模式
 
