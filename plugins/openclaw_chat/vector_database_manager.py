@@ -77,7 +77,7 @@ class VectorDatabaseManager:
         self._init_chroma_client()
 
         # 集合缓存
-        self._collections: Dict[str, chromadb.Collection] = {}
+        self._collections: Dict[str, "chromadb.Collection"] = {}
 
         logger.info("✅ 向量数据库管理器初始化成功")
 
@@ -113,7 +113,7 @@ class VectorDatabaseManager:
         # Chroma 的集合名称要求：只能包含字母、数字、下划线和连字符
         return f"kb_{kb_id.replace('-', '_').replace('.', '_')}"
 
-    def _get_or_create_collection(self, kb_id: str) -> chromadb.Collection:
+    def _get_or_create_collection(self, kb_id: str) -> "chromadb.Collection":
         """
         获取或创建集合
 
