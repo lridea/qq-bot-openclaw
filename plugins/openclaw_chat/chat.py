@@ -111,16 +111,30 @@ async def handle_chat(bot: Bot, event: Event):
 
             logger.info(f"🎨 Vision AI 提示词: {prompt}")
 
+            # 导入系统提示词构建函数
+            from .ai_processor import _build_system_prompt
+
+            # 构建系统提示词（应用人设）
+            system_prompt = _build_system_prompt(
+                user_id=user_id,
+                context="qq_group" if group_id else "qq_private",
+                group_id=group_id,
+                reply_mode=config.reply_mode
+            )
+
+            logger.info(f"🎨 Vision AI 系统提示词: {system_prompt[:100]}...")
+
             reply = await vision_client.recognize_image(
                 image_data=image_data,
                 prompt=prompt,
-                model=vision_model
+                model=vision_model,
+                system_prompt=system_prompt  # 传递系统提示词
             )
-            
+
             # 发送回复
             await chat.send(reply)
             return
-        
+
         # ========== 普通文本对话 ==========
         # 调用本地 AI 处理
         reply = await process_message_with_ai(
@@ -734,15 +748,29 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
 
             logger.info(f"🎨 Vision AI 提示词: {prompt}")
 
+            # 导入系统提示词构建函数
+            from .ai_processor import _build_system_prompt
+
+            # 构建系统提示词（应用人设）
+            system_prompt = _build_system_prompt(
+                user_id=user_id,
+                context="qq_group_intelligent",
+                group_id=group_id,
+                reply_mode=config.reply_mode
+            )
+
+            logger.info(f"🎨 Vision AI 系统提示词: {system_prompt[:100]}...")
+
             reply = await vision_client.recognize_image(
                 image_data=image_data,
                 prompt=prompt,
-                model=vision_model
+                model=vision_model,
+                system_prompt=system_prompt  # 传递系统提示词
             )
-            
+
             await intelligent_chat.send(reply)
             return
-        
+
         # 普通文本对话
         reply = await process_message_with_ai(
             message=message,
