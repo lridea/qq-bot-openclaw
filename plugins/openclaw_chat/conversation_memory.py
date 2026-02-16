@@ -280,7 +280,10 @@ class ConversationMemory:
                 history = [msg for msg in history if msg["timestamp"] > expire_time]
 
                 # 如果有过期消息，更新文件
-                if len(history) < len(json.load(open(long_term_file))):
+                with open(long_term_file, "r", encoding="utf-8") as f:
+                    original_length = len(json.load(f))
+
+                if len(history) < original_length:
                     with open(long_term_file, "w", encoding="utf-8") as f:
                         json.dump(history, f, ensure_ascii=False, indent=2)
 
