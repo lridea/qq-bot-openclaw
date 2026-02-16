@@ -11,6 +11,7 @@ from nonebot.adapters.onebot.v11 import Bot, Event, Message, MessageSegment
 from nonebot.log import logger
 from nonebot.params import CommandArg
 from typing import Optional
+from nonebot.permission import SUPERUSER
 import sys
 import os
 
@@ -217,3 +218,169 @@ async def handle_models():
     
     models_info = list_available_models()
     await models_cmd.send(models_info)
+
+
+# ========== 超级管理员专用命令 ==========
+
+from nonebot.permission import SUPERUSER
+
+# 状态命令
+status_cmd = on_command("status", aliases={"状态"}, priority=1, permission=SUPERUSER)
+
+
+@status_cmd.handle()
+async def handle_status():
+    """显示系统状态（仅超级管理员）"""
+    from .ai_processor import MODEL_CONFIGS
+    
+    # 获取当前模型配置
+    model_config = MODEL_CONFIGS.get(config.ai_model)
+    
+    status_text = f"""✨ 星野系统状态 💙
+
+【配置信息】
+• 机器人名称：{config.bot_name}
+• 当前模型：{config.ai_model}
+• 当前模型名称：{config.model_name or model_config['default_model'] if model_config else '未知'}
+• 模型描述：{model_config['description'] if model_config else '未知'}
+
+【AI 配置】
+• API Key 已配置：✅ 是" if config.current_api_key else "❌ 否"
+• 会话超时：{config.session_expire_timeout} 秒
+
+【运行配置】
+• 监听地址：{config.host}:{config.port}
+• NapCat 地址：{config.napcat_ws_url}
+• 超级管理员：{len(config.superusers)} 位
+
+【系统信息】
+• Python 版本：{sys.version.split()[0]}
+• 运行环境：{'Windows' if sys.platform == 'win32' else 'Linux' if sys.platform.startswith('linux') else 'macOS'}
+• 日志级别：{config.log_level}
+
+✨ 系统运行正常 💙
+"""
+    await status_cmd.send(status_text)
+
+
+# 切换模型命令
+switch_model_cmd = on_command("switch", aliases={"切换模型"}, priority=1, permission=SUPERUSER)
+
+
+@switch_model_cmd.handle()
+async def handle_switch_model(args: Message = CommandArg()):
+    """切换 AI 模型（仅超级管理员）"""
+    from .ai_processor import MODEL_CONFIGS
+    
+    # 获取参数
+    new_model = str(args).strip().lower()
+    
+    if not new_model:
+        # 显示可切换的模型列表
+        available = list(MODEL_CONFIGS.keys())
+        text = "✨ 可切换的 AI 模型列表 💙\n\n"
+        for model_id in available:
+            model_config = MODEL_CONFIGS[model_id]
+            current_mark = "✓ 当前" if model_id == config.ai_model else ""
+            text += f"• {model_config['name']} ({model_id}) {current_mark}\n"
+        await switch_model_cmd.send(text)
+        return
+    
+    # 验证模型
+    if new_model not in MODEL_CONFIGS:
+        await switch_model_cmd.send(f"❌ 模型 '{new_model}' 不存在\n\n可用模型：{', '.join(MODEL_CONFIGS.keys())}")
+        return
+    
+    # 切换模型
+    old_model = config.ai_model
+    config.ai_model = new_model
+    
+    model_config = MODEL_CONFIGS[new_model]
+    await switch_model_cmd.send(f"✅ 模型切换成功\n\n• 从：{old_model}\n• 到：{new_model} ({model_config['name']})\n\n✨ 已生效 💙")
+
+
+# 设置具体模型命令
+set_model_cmd = on_command("set_model", aliases={"设置模型"}, priority=1, permission=SUPERUSER)
+
+
+@set_model_cmd.handle()
+async def handle_set_model(args: Message = CommandArg()):
+    """设置具体的 AI 模型（仅超级管理员）"""
+    from .ai_processor import MODEL_CONFIGS
+    
+    # 获取参数
+    new_model_name = str(args).strip()
+    
+    if not new_model_name:
+        await set_model_cmd.send(f"❌ 请指定模型名称\n\n例如：/set_model gpt-4o-mini\n\n使用 /models 查看所有可用模型")
+        return
+    
+    # 验证模型是否在当前供应商的模型列表中
+    model_config = MODEL_CONFIGS.get(config.ai_model)
+    if not model_config:
+        await set_model_cmd.send(f"❌ 当前供应商 {config.ai_model} 不存在")
+        return
+    
+    if new_model_name not in model_config['models']:
+        await set_model_cmd.send(f"❌ 模型 '{new_model_name}' 不在 {model_config['name']} 的支持列表中\n\n使用 /models 查看所有可用模型")
+        return
+    
+    # 设置模型
+    old_model_name = config.model_name or model_config['default_model']
+    config.model_name = new_model_name
+    
+    await set_model_cmd.send(f"✅ 模型设置成功\n\n• 供应商：{config.ai_model} ({model_config['name']})\n• 从：{old_model_name}\n• 到：{new_model_name}\n\n✨ 已生效 💙")
+
+
+# 重启命令
+restart_cmd = on_command("restart", aliases={"重启"}, priority=1, permission=SUPERUSER)
+
+
+@restart_cmd.handle()
+async def handle_restart():
+    """重启机器人（仅超级管理员）"""
+    await restart_cmd.send("🔄 正在重启星野... ✨💙\n\n⏱️ 请稍等片刻...")
+    
+    # 保存记录
+    logger.info(f"超级管理员 {config.superusers} 请求重启机器人")
+    
+    # 这里可以添加实际的重启逻辑
+    # 目前只发送提示消息
+    await restart_cmd.send("💡 提示：请在终端中手动重启机器人\n\nbash start.sh")
+
+
+# 管理员帮助命令
+admin_help_cmd = on_command("admin", aliases={"管理员帮助"}, priority=1, permission=SUPERUSER)
+
+
+@admin_help_cmd.handle()
+async def handle_admin_help():
+    """显示管理员命令帮助（仅超级管理员）"""
+    help_text = """
+🔐 超级管理员命令列表 ✨💙
+
+【系统管理】
+• /status 或 /状态 - 查看系统状态
+• /restart 或 /重启 - 重启机器人
+
+【模型管理】
+• /switch 或 /切换模型 - 切换 AI 供应商
+  • /switch siliconflow - 切换到硅基流动
+  • /switch deepseek - 切换到 DeepSeek
+• /set_model 或 /设置模型 - 设置具体模型
+  • /set_model gpt-4o-mini - 设置为 GPT-4o-mini
+  • /set_model glm-4.7 - 设置为 GLM-4.7
+
+【信息查询】
+• /models - 查看所有可用模型
+• /model - 查看当前模型信息
+
+【权限说明】
+⚠️ 以上命令仅超级管理员可以使用
+📝 超级管理员配置在 .env 文件的 SUPERUSERS
+
+💡 提示：使用 /help 查看所有命令
+"""
+    await admin_help_cmd.send(help_text)
+
+
