@@ -326,6 +326,17 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.11.0 (2026-02-16) 🎨 Vision AI 独立配置
+- 🎯 将 Vision AI 模型配置从文本对话模型配置中分离
+- ✨ 支持独立的 Vision AI 配置系统
+- 🔧 添加 Vision AI 管理员命令（/vision_status, /vision_enable, /vision_disable, /vision_set）
+- 📚 创建 Vision AI 配置文档（docs/VISION_CONFIG.md）
+- 🔑 添加 get_vision_api_key() 方法，自动选择供应商的 API Key
+- 🛡️ 优化 Vision AI 调用逻辑，添加启用/禁用检查
+- 📝 更新 .env.example 添加 Vision AI 环境变量
+- 💡 支持动态切换 Vision 供应商和模型，无需重启
+- 💰 支持灵活配置，降低 Vision AI 成本
+
 ### v1.10.0 (2026-02-16) 💬 对话记忆功能
 - 🧠 实现分层记忆架构（短期记忆 + 长期记忆）
 - 💾 支持对话历史传递给 AI，机器人能记住之前的对话
