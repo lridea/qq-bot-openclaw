@@ -362,10 +362,9 @@ async def handle_kb_group_set(args: Message = CommandArg(), event: GroupMessageE
             await kb_group_set.finish(f"⚠️  知识库不存在: {kb_id}\n\n💡 使用 /kb_list 查看可用知识库")
 
         # 设置群知识库配置
-        from config import config as cfg
         from config import KnowledgeBaseConfig
 
-        cfg.set_group_kb_config(
+        config.set_group_kb_config(
             group_id=group_id,
             kb_config=KnowledgeBaseConfig(
                 enabled=True,
@@ -409,10 +408,8 @@ async def handle_kb_group_status(event: GroupMessageEvent = None):
 
     try:
         # 获取群知识库配置
-        from config import config as cfg
-
-        kb_id = cfg.get_group_kb_id(group_id)
-        top_k = cfg.get_group_kb_top_k(group_id)
+        kb_id = config.get_group_kb_id(group_id)
+        top_k = config.get_group_kb_top_k(group_id)
 
         if not kb_id:
             await kb_group_status.finish(
