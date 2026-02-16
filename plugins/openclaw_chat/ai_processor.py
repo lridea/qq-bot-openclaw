@@ -59,7 +59,9 @@ MODEL_CONFIGS = {
             "meta-llama/Meta-Llama-3-8B-Instruct",
             "meta-llama/Meta-Llama-3.1-8B-Instruct",
             "meta-llama/Meta-Llama-3.1-70B-Instruct",
-            "meta-llama/Meta-Llama-3.1-405B-Instruct"
+            "meta-llama/Meta-Llama-3.1-405B-Instruct",
+            # 快手模型
+            "Kwai-Kolors/Kolors"
         ],
         "default_model": "Qwen/Qwen2.5-7B-Instruct",
         "env_key": "SILICONFLOW_API_KEY",

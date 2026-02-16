@@ -33,7 +33,11 @@ from config import Config
 config = Config()
 logger.info(f"机器人配置加载完成: {config.bot_name}")
 
-# ========== 初始化对话记忆 ==========
+# 加载插件（必须先加载插件，再导入插件模块）
+nonebot.load_builtin_plugins("echo")
+nonebot.load_from_toml("pyproject.toml")
+
+# ========== 初始化对话记忆（插件加载后） ==========
 if config.memory_enabled:
     try:
         from plugins.openclaw_chat.conversation_memory import init_memory_manager
@@ -54,10 +58,6 @@ if config.memory_enabled:
         logger.error(f"❌ 对话记忆初始化失败: {e}")
 else:
     logger.info("⚠️  对话记忆已禁用")
-
-# 加载插件
-nonebot.load_builtin_plugins("echo")
-nonebot.load_from_toml("pyproject.toml")
 
 # 启动机器人
 if __name__ == "__main__":
