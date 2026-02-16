@@ -507,7 +507,6 @@ vision_status_cmd = on_command("vision_status", aliases={"视觉状态", "vision
 @vision_status_cmd.handle()
 async def handle_vision_status():
     """查看 Vision AI 配置（仅超级管理员）"""
-    from config import config
 
     status_text = f"""
 🎨 Vision AI 状态 ✨💙
@@ -547,7 +546,6 @@ vision_disable_cmd = on_command("vision_disable", aliases={"视觉禁用", "visi
 async def handle_vision_enable():
     """启用 Vision AI（仅超级管理员）"""
     import os
-    from config import config
 
     os.environ["VISION_ENABLED"] = "true"
     config.vision_enabled = True
@@ -572,7 +570,6 @@ async def handle_vision_enable():
 async def handle_vision_disable():
     """禁用 Vision AI（仅超级管理员）"""
     import os
-    from config import config
 
     os.environ["VISION_ENABLED"] = "false"
     config.vision_enabled = False
@@ -601,7 +598,6 @@ vision_set_cmd = on_command("vision_set", aliases={"视觉设置", "vision_set",
 async def handle_vision_set(event: Event):
     """设置 Vision AI 配置（仅超级管理员）"""
     import os
-    from config import config
 
     args = event.get_plaintext().strip().split()
 
@@ -1155,7 +1151,6 @@ reply_mode_list_cmd = on_command("reply_mode_list", aliases={"简洁列表", "�
 @reply_mode_list_cmd.handle()
 async def handle_reply_mode_list():
     """显示所有群的简洁模式配置（仅超级管理员）"""
-    from config import config
 
     # 加载群组配置
     config.load_group_configs()
