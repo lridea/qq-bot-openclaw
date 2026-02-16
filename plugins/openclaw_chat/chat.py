@@ -686,7 +686,11 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
 
         message_obj = event.get_message()
 
-        # 检查消息中是否有@片段
+        # ========== 检查是否@了机器人 ==========
+        # 如果消息中@了机器人，则允许触发
+        # 如果没有@机器人，但@了其他人，则不触发
+
+        has_at_bot = False
         has_at_other = False
         bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
 
@@ -695,21 +699,26 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
                 # 获取@的QQ号
                 at_qq = segment.data.get('qq')
 
-                # 如果@的不是机器人自己，则标记为@了其他人
-                if at_qq and bot_self_id and at_qq != bot_self_id:
-                    has_at_other = True
-                    logger.info(f"🚫 消息@了其他人（QQ: {at_qq}），不触发智能回复")
-                    break
+                if at_qq and bot_self_id:
+                    if at_qq == bot_self_id:
+                        # @了机器人，标记并继续检查是否还有@其他人
+                        has_at_bot = True
+                    else:
+                        # @了其他人，标记
+                        has_at_other = True
                 elif at_qq and not bot_self_id:
                     # 如果无法获取机器人QQ号，保守处理，不触发
-                    has_at_other = True
                     logger.info(f"🚫 无法获取机器人QQ号，保守处理，不触发智能回复")
-                    break
+                    return
 
-        # 如果@了其他人，直接返回
-        if has_at_other:
+        # 如果@了机器人，允许触发
+        if has_at_bot:
+            logger.info(f"✅ 消息@了机器人，允许智能触发")
+        # 如果没有@机器人，但@了其他人，则不触发
+        elif has_at_other:
+            logger.info(f"🚫 消息@了其他人（未@机器人），不触发智能回复")
             return
-        # ========== 检查@其他人结束 ==========
+        # ========== 检查@机器人结束 ==========
 
         # 获取群组的智能触发配置
         trigger_config = config.get_group_trigger_config(group_id)
@@ -722,14 +731,14 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
         if trigger_config.require_mention:
             # 如果强制要求@，则不处理（已有 to_me 处理器处理@）
             return
-        
+
         # 创建触发检测器
         trigger_detector = IntelligentTrigger(trigger_config.mention_patterns)
-        
+
         # 检查是否触发
         if not trigger_detector.check_trigger(message):
             return
-        
+
         # 记录日志
         logger.info(f"🎯 智能触发 (群: {group_id}, 用户: {user_id}): {message[:50]}")
         

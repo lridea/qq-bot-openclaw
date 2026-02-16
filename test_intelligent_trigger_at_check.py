@@ -61,20 +61,27 @@ def test_at_check():
 
     print(f"   消息: {message_obj}")
 
+    has_at_bot = False
     has_at_other = False
     bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
 
     for segment in message_obj:
         if segment.type == 'at':
             at_qq = segment.data.get('qq')
-            if at_qq and bot_self_id and at_qq != bot_self_id:
-                has_at_other = True
-                break
+            if at_qq and bot_self_id:
+                if at_qq == bot_self_id:
+                    has_at_bot = True
+                else:
+                    has_at_other = True
 
-    result = "✅ 不应该阻止（可以触发）" if not has_at_other else "❌ 应该阻止"
+    # 如果@了机器人，允许触发
+    # 如果没有@机器人，但@了其他人，则不触发
+    should_trigger = has_at_bot or not has_at_other
+
+    result = "✅ 应该触发" if should_trigger else "❌ 不应该触发"
     print(f"   结果: {result}")
-    print(f"   预期: ✅ 不应该阻止（可以触发）")
-    print(f"   测试: {'✅ 通过' if not has_at_other else '❌ 失败'}")
+    print(f"   预期: ✅ 应该触发")
+    print(f"   测试: {'✅ 通过' if should_trigger else '❌ 失败'}")
 
     # 测试场景2：@其他人 + 疑问 → 不应该触发
     print("\n📌 场景2：@其他人 + 疑问 → 不应该触发")
@@ -85,20 +92,27 @@ def test_at_check():
 
     print(f"   消息: {message_obj}")
 
+    has_at_bot = False
     has_at_other = False
     bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
 
     for segment in message_obj:
         if segment.type == 'at':
             at_qq = segment.data.get('qq')
-            if at_qq and bot_self_id and at_qq != bot_self_id:
-                has_at_other = True
-                break
+            if at_qq and bot_self_id:
+                if at_qq == bot_self_id:
+                    has_at_bot = True
+                else:
+                    has_at_other = True
 
-    result = "✅ 应该阻止（不触发）" if has_at_other else "❌ 不应该阻止"
+    # 如果@了机器人，允许触发
+    # 如果没有@机器人，但@了其他人，则不触发
+    should_trigger = has_at_bot or not has_at_other
+
+    result = "❌ 不应该触发" if not should_trigger else "✅ 应该触发"
     print(f"   结果: {result}")
-    print(f"   预期: ✅ 应该阻止（不触发）")
-    print(f"   测试: {'✅ 通过' if has_at_other else '❌ 失败'}")
+    print(f"   预期: ❌ 不应该触发")
+    print(f"   测试: {'✅ 通过' if not should_trigger else '❌ 失败'}")
 
     # 测试场景3：直接问问题（无@）→ 应该触发
     print("\n📌 场景3：直接问问题（无@）→ 应该触发")
@@ -108,23 +122,30 @@ def test_at_check():
 
     print(f"   消息: {message_obj}")
 
+    has_at_bot = False
     has_at_other = False
     bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
 
     for segment in message_obj:
         if segment.type == 'at':
             at_qq = segment.data.get('qq')
-            if at_qq and bot_self_id and at_qq != bot_self_id:
-                has_at_other = True
-                break
+            if at_qq and bot_self_id:
+                if at_qq == bot_self_id:
+                    has_at_bot = True
+                else:
+                    has_at_other = True
 
-    result = "✅ 不应该阻止（可以触发）" if not has_at_other else "❌ 应该阻止"
+    # 如果@了机器人，允许触发
+    # 如果没有@机器人，但@了其他人，则不触发
+    should_trigger = has_at_bot or not has_at_other
+
+    result = "✅ 应该触发" if should_trigger else "❌ 不应该触发"
     print(f"   结果: {result}")
-    print(f"   预期: ✅ 不应该阻止（可以触发）")
-    print(f"   测试: {'✅ 通过' if not has_at_other else '❌ 失败'}")
+    print(f"   预期: ✅ 应该触发")
+    print(f"   测试: {'✅ 通过' if should_trigger else '❌ 失败'}")
 
-    # 测试场景4：多个@（包含机器人和其他人）→ 不应该触发
-    print("\n📌 场景4：多个@（包含机器人和其他人）→ 不应该触发")
+    # 测试场景4：多个@（包含机器人和其他人）→ 应该触发
+    print("\n📌 场景4：多个@（包含机器人和其他人）→ 应该触发")
     message_obj = Message([
         MessageSegment(type='at', data={'qq': '123456789'}),
         MessageSegment(type='at', data={'qq': '987654321'}),
@@ -133,20 +154,27 @@ def test_at_check():
 
     print(f"   消息: {message_obj}")
 
+    has_at_bot = False
     has_at_other = False
     bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
 
     for segment in message_obj:
         if segment.type == 'at':
             at_qq = segment.data.get('qq')
-            if at_qq and bot_self_id and at_qq != bot_self_id:
-                has_at_other = True
-                break
+            if at_qq and bot_self_id:
+                if at_qq == bot_self_id:
+                    has_at_bot = True
+                else:
+                    has_at_other = True
 
-    result = "✅ 应该阻止（不触发）" if has_at_other else "❌ 不应该阻止"
+    # 如果@了机器人，允许触发
+    # 如果没有@机器人，但@了其他人，则不触发
+    should_trigger = has_at_bot or not has_at_other
+
+    result = "✅ 应该触发" if should_trigger else "❌ 不应该触发"
     print(f"   结果: {result}")
-    print(f"   预期: ✅ 应该阻止（不触发）")
-    print(f"   测试: {'✅ 通过' if has_at_other else '❌ 失败'}")
+    print(f"   预期: ✅ 应该触发")
+    print(f"   测试: {'✅ 通过' if should_trigger else '❌ 失败'}")
 
     print("\n" + "=" * 60)
     print("🎯 测试完成")
