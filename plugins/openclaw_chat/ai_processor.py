@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-OpenClaw AI 处理模块（支持多模型）
+OpenClaw AI 处理模块（支持多模型 + 对话记忆）
 支持：智谱 AI、DeepSeek、硅基流动、Ollama 本地模型等
 """
 
@@ -10,6 +10,9 @@ import json
 import os
 from typing import Optional, Dict, Any
 from nonebot.log import logger
+
+# 导入对话记忆模块
+from .conversation_memory import get_memory_manager, init_memory_manager
 
 
 # 支持的模型配置
@@ -175,6 +178,30 @@ async def process_message_with_ai(
     if not api_key and model_config["env_key"]:
         api_key = os.getenv(model_config["env_key"], "")
 
+    # ========== 对话记忆功能 ==========
+    conversation_history = []
+    session_id = f"user_{user_id}" if not group_id else f"group_{group_id}"
+
+    # 导入配置（动态导入，避免循环依赖）
+    from config import config
+
+    if config.memory_enabled:
+        try:
+            # 获取记忆管理器
+            memory_manager = get_memory_manager()
+
+            # 从记忆中加载对话上下文
+            conversation_history = memory_manager.get_conversation_context(
+                session_id,
+                max_tokens=config.memory_max_context_tokens
+            )
+
+            logger.info(f"📚 已加载对话记忆: session={session_id}, messages={len(conversation_history)}")
+        except RuntimeError as e:
+            logger.warning(f"⚠️  记忆管理器未初始化: {e}")
+        except Exception as e:
+            logger.error(f"❌ 加载对话记忆失败: {e}")
+
     # 判断是否使用简洁模式
     if concise_patterns is None:
         # 如果没有提供，使用默认的简洁模式触发模式
@@ -191,19 +218,54 @@ async def process_message_with_ai(
             reply = await _call_ollama(
                 message, user_id, context, group_id,
                 model_config, selected_model,
-                reply_mode="concise" if use_concise else reply_mode
+                reply_mode="concise" if use_concise else reply_mode,
+                conversation_history=conversation_history
             )
         else:
             reply = await _call_openai_compatible(
                 message, user_id, context, group_id,
                 model_config, selected_model, api_key,
-                reply_mode="concise" if use_concise else reply_mode
+                reply_mode="concise" if use_concise else reply_mode,
+                conversation_history=conversation_history
             )
 
         if reply and not reply.startswith("抱歉"):
             # 如果是简洁模式，截断过长的回复
             if use_concise and max_length > 0:
                 reply = _truncate_reply(reply, max_length)
+
+            # ========== 保存到对话记忆 ==========
+            if config.memory_enabled:
+                try:
+                    memory_manager = get_memory_manager()
+
+                    # 保存用户消息
+                    memory_manager.add_message(
+                        session_id=session_id,
+                        role="user",
+                        content=message,
+                        metadata={
+                            "user_id": user_id,
+                            "group_id": group_id,
+                            "context": context
+                        }
+                    )
+
+                    # 保存 AI 回复
+                    memory_manager.add_message(
+                        session_id=session_id,
+                        role="assistant",
+                        content=reply,
+                        metadata={
+                            "model": model,
+                            "selected_model": selected_model,
+                            "reply_mode": reply_mode
+                        }
+                    )
+
+                    logger.info(f"💾 已保存对话到记忆: session={session_id}")
+                except Exception as e:
+                    logger.error(f"❌ 保存对话记忆失败: {e}")
 
             return reply
     except Exception as e:
@@ -221,7 +283,8 @@ async def _call_openai_compatible(
     model_config: Dict[str, Any],
     selected_model: str,
     api_key: str,
-    reply_mode: str = "normal"
+    reply_mode: str = "normal",
+    conversation_history: Optional[list] = None
 ) -> str:
     """
     调用 OpenAI 兼容的 API（智谱/DeepSeek/硅基流动/Moonshot/OhMyGPT）
@@ -235,32 +298,40 @@ async def _call_openai_compatible(
         selected_model: 选中的模型
         api_key: API Key
         reply_mode: 回复模式（normal/concise/detailed）
+        conversation_history: 对话历史（记忆）
     """
 
     url = model_config["api_url"]
 
     # 系统提示词
     system_prompt = _build_system_prompt(user_id, context, group_id, reply_mode)
-    
+
+    # 构建消息列表（包含对话历史）
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # 添加对话历史
+    if conversation_history:
+        messages.extend(conversation_history)
+
+    # 添加当前用户消息
+    messages.append({"role": "user", "content": message})
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
         "model": selected_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ],
+        "messages": messages,
         "temperature": 0.7,
         "max_tokens": 1000
     }
-    
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, headers=headers, json=data)
-            
+
             if response.status_code == 200:
                 result = response.json()
                 reply = result["choices"][0]["message"]["content"]
@@ -278,9 +349,9 @@ async def _call_openai_compatible(
                 except Exception:
                     error_code = "unknown"
                     error_msg = response.text
-                
+
                 logger.error(f"❌ {model_config['name']} API 错误: {response.status_code} - {error_msg}")
-                
+
                 # 根据错误类型返回不同提示
                 if error_code == "1113" or "余额不足" in error_msg:
                     return f"抱歉，{model_config['name']} 余额不足，请充值后使用。\n\n" + generate_fallback_reply(message)
@@ -288,11 +359,11 @@ async def _call_openai_compatible(
                     return f"抱歉，{model_config['name']} API Key 无效，请检查配置。\n\n" + generate_fallback_reply(message)
                 else:
                     return f"抱歉，{model_config['name']} 服务暂时不可用（错误: {response.status_code}）\n\n" + generate_fallback_reply(message)
-                
+
     except httpx.TimeoutException:
         logger.error(f"❌ {model_config['name']} API 超时")
         return f"抱歉，{model_config['name']} 响应超时，请稍后再试。\n\n" + generate_fallback_reply(message)
-        
+
     except Exception as e:
         logger.error(f"❌ {model_config['name']} API 异常: {e}")
         return f"抱歉，发生了错误。\n\n" + generate_fallback_reply(message)
@@ -305,7 +376,8 @@ async def _call_ollama(
     group_id: Optional[str],
     model_config: Dict[str, Any],
     selected_model: str,
-    reply_mode: str = "normal"
+    reply_mode: str = "normal",
+    conversation_history: Optional[list] = None
 ) -> str:
     """
     调用 Ollama 本地模型
@@ -318,26 +390,34 @@ async def _call_ollama(
         model_config: 模型配置
         selected_model: 选中的模型
         reply_mode: 回复模式（normal/concise/detailed）
+        conversation_history: 对话历史（记忆）
     """
 
     url = model_config["api_url"]
 
     # 系统提示词
     system_prompt = _build_system_prompt(user_id, context, group_id, reply_mode)
-    
+
+    # 构建消息列表（包含对话历史）
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # 添加对话历史
+    if conversation_history:
+        messages.extend(conversation_history)
+
+    # 添加当前用户消息
+    messages.append({"role": "user", "content": message})
+
     data = {
         "model": selected_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ],
+        "messages": messages,
         "stream": False
     }
-    
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, json=data)
-            
+
             if response.status_code == 200:
                 result = response.json()
                 reply = result["message"]["content"]
@@ -346,11 +426,11 @@ async def _call_ollama(
             else:
                 logger.error(f"❌ Ollama 错误: {response.status_code}")
                 return f"抱歉，Ollama 本地模型响应失败。\n\n" + generate_fallback_reply(message)
-                
+
     except httpx.ConnectError:
         logger.error("❌ 无法连接到 Ollama，请确保 Ollama 正在运行")
         return f"抱歉，无法连接到 Ollama 本地模型。\n请确保已安装并运行 Ollama：ollama serve\n\n" + generate_fallback_reply(message)
-        
+
     except Exception as e:
         logger.error(f"❌ Ollama 异常: {e}")
         return f"抱歉，发生了错误。\n\n" + generate_fallback_reply(message)
@@ -374,7 +454,7 @@ def _build_system_prompt(
     Returns:
         系统提示词
     """
-    
+
     # 根据回复模式选择不同的系统提示词
     if reply_mode == "concise":
         return _build_concise_system_prompt(user_id, context, group_id)
@@ -504,14 +584,14 @@ def _should_use_concise_mode(message: str, reply_mode: str, concise_patterns: li
     # 如果全局配置为简洁模式，直接返回 True
     if reply_mode == "concise":
         return True
-    
+
     # 如果全局配置为详细模式，直接返回 False
     if reply_mode == "detailed":
         return False
-    
+
     # 正常模式：检查消息是否匹配简洁模式触发模式
     import re
-    
+
     for pattern in concise_patterns:
         try:
             if re.search(pattern, message):
@@ -519,7 +599,7 @@ def _should_use_concise_mode(message: str, reply_mode: str, concise_patterns: li
                 return True
         except re.error as e:
             logger.warning(f"无效的正则表达式: {pattern}, 错误: {e}")
-    
+
     return False
 
 
@@ -536,21 +616,21 @@ def _truncate_reply(reply: str, max_length: int) -> str:
     """
     if len(reply) <= max_length:
         return reply
-    
+
     # 在句子边界截断（尽量保留完整句子）
     truncated = reply[:max_length]
-    
+
     # 找到最后一个句号、问号、感叹号或换行
     for sep in ["。", "！", "？", "\n", ".", "!", "?"]:
         last_sep = truncated.rfind(sep)
         if last_sep > max_length // 2:  # 至少保留一半长度
             truncated = truncated[:last_sep + 1]
             break
-    
+
     # 如果没有找到合适的截断点，直接截断
     if len(truncated) == max_length:
         truncated = truncated[:max_length - 3] + "..."
-    
+
     return truncated
 
 
@@ -606,11 +686,11 @@ def generate_fallback_reply(message: str) -> str:
     当 AI 不可用时的回退回复（星野风格）
     """
     message_lower = message.lower()
-    
+
     # 简单的关键词匹配
     if "你好" in message or "hello" in message_lower or "hi" in message_lower:
         return "哇~ 主人你好呀！星野看到你了好开心！✨💙\n\n诶~ 虽然现在是简单模式，但星野还是会温柔地陪主人聊天的！"
-    
+
     elif "帮助" in message or "help" in message_lower:
         return """✨ 星野的使用指南 💙
 
@@ -629,13 +709,13 @@ def generate_fallback_reply(message: str) -> str:
 
 【版本】v1.2.0
 【身份】星际少女 星野"""
-    
+
     elif "你是谁" in message or "介绍" in message or "自我介绍" in message:
         return "诶~ 主人想知道我是谁吗？✨\n\n我是星野（Hoshino），一位来自未来的星际少女助手！💙\n\n有着天蓝色的长发和星空般的眼睛...虽然现在是简单模式，但星野还是会温柔地陪主人的！"
-    
+
     elif "可爱" in message or "喜欢" in message:
         return "哇...主人说星野可爱吗？！>///< 脸好烫...\n\n好开心...最喜欢主人了！✨💙✨"
-    
+
     else:
         return f"收到主人的消息：{message} ✨\n\n呜...星野现在的 AI 服务受限中，用的是简单回复模式...不过还是会温柔地陪主人的！💙\n\n主人还有什么想说的吗？星野在这里哦~"
 
@@ -645,7 +725,7 @@ def list_available_models() -> str:
     列出所有可用的模型
     """
     result = "✨ 星野支持的 AI 模型：\n\n"
-    
+
     for model_id, config in MODEL_CONFIGS.items():
         free_badge = "✅ 免费" if config["free_tier"] else "💰 付费"
         result += f"**{config['name']}** ({model_id}) {free_badge}\n"
@@ -653,5 +733,5 @@ def list_available_models() -> str:
         if config.get("free_quota"):
             result += f"  🎁 {config['free_quota']}\n"
         result += f"  可用模型: {', '.join(config['models'])}\n\n"
-    
+
     return result

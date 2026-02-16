@@ -94,7 +94,16 @@ class Config(BaseModel):
     reply_mode: str = os.getenv("REPLY_MODE", "normal")  # normal/concise/detailed
     reply_max_length: int = int(os.getenv("REPLY_MAX_LENGTH", "500"))  # 回复最大字符数
     concise_mode_patterns: List[str] = eval(os.getenv("CONCISE_MODE_PATTERNS", '["[？?]", "(怎么|如何|为什么)"]'))  # 简洁模式触发模式
-    
+
+    # ========== 对话记忆配置 ==========
+    memory_enabled: bool = os.getenv("MEMORY_ENABLED", "true").lower() == "true"  # 是否启用对话记忆
+    memory_storage: str = os.getenv("MEMORY_STORAGE", "file")  # 存储方式：file/sqlite/memory
+    memory_dir: str = os.getenv("MEMORY_DIR", "data/conversations")  # 记忆存储目录
+    memory_short_term_length: int = int(os.getenv("MEMORY_SHORT_TERM_LENGTH", "10"))  # 短期记忆长度（消息数量）
+    memory_long_term_expire_days: int = int(os.getenv("MEMORY_LONG_TERM_EXPIRE_DAYS", "30"))  # 长期记忆过期时间（天）
+    memory_auto_clean: bool = os.getenv("MEMORY_AUTO_CLEAN", "true").lower() == "true"  # 是否自动清理过期记忆
+    memory_max_context_tokens: int = int(os.getenv("MEMORY_MAX_CONTEXT_TOKENS", "2000"))  # 最大上下文 Token 数
+
     # 群组配置（运行时加载）
     _group_configs: Dict[str, GroupConfig] = {}
     
