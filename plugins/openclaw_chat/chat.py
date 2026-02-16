@@ -53,6 +53,40 @@ async def handle_chat(bot: Bot, event: Event):
         # 记录日志
         logger.info(f"收到消息 (用户: {user_id}, 群: {group_id}): {message[:50]}")
         
+        # ========== 图片识别功能 ==========
+        # 检测消息中是否有图片
+        from .image_processor import extract_image_from_message
+        from .vision_client import VisionAIClient
+        
+        image_data = await extract_image_from_message(bot, event)
+        
+        if image_data and image_data.has_data():
+            # 有图片，使用 Vision AI 识别
+            logger.info("📸 检测到图片，启动 Vision AI 识别...")
+            
+            # 获取 Vision 模型配置
+            vision_model = config.model_name or "gpt-4o-mini"
+            
+            # 创建 Vision AI 客户端
+            vision_client = VisionAIClient(
+                api_key=config.current_api_key,
+                provider=config.ai_model,
+                base_url=None  # 使用默认 URL
+            )
+            
+            # 识别图片
+            prompt = f"请识别这张图片，并结合用户的问题回答：{message}" if message else "请描述这张图片的内容"
+            reply = await vision_client.recognize_image(
+                image_data=image_data,
+                prompt=prompt,
+                model=vision_model
+            )
+            
+            # 发送回复
+            await chat.send(reply)
+            return
+        
+        # ========== 普通文本对话 ==========
         # 调用本地 AI 处理
         reply = await process_message_with_ai(
             message=message,
