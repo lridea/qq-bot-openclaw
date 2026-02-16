@@ -90,9 +90,9 @@ async def handle_kb_list():
         reply_lines = ["📚 知识库列表\n"]
 
         for i, kb_info in enumerate(kb_list_data, 1):
-            kb_id = kb_info["kb_id"]
-            kb_name = kb_info["kb_name"]
-            status = kb_info["status"]
+            kb_id = kb_info.kb_id
+            kb_name = kb_info.kb_name
+            status = kb_info.status
 
             # 状态图标
             status_icon = "✅" if status == "ready" else "⏳"
@@ -422,8 +422,8 @@ async def handle_kb_group_status(event: GroupMessageEvent = None):
         ]
 
         if kb_info:
-            reply_lines.append(f"• 知识库名称: {kb_info['kb_name']}")
-            reply_lines.append(f"• 状态: {'✅ 已就绪' if kb_info['status'] == 'ready' else '⏳ 构建中'}")
+            reply_lines.append(f"• 知识库名称: {kb_info.kb_name}")
+            reply_lines.append(f"• 状态: {'✅ 已就绪' if kb_info.status == 'ready' else '⏳ 构建中'}")
         else:
             reply_lines.append(f"• 状态: ⚠️  知识库不存在")
 
