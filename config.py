@@ -32,10 +32,18 @@ class ReplyModeConfig(BaseModel):
     reply_mode: Optional[str] = None  # normal/concise/detailed（None 表示使用全局默认）
 
 
+class KnowledgeBaseConfig(BaseModel):
+    """知识库配置"""
+    enabled: Optional[bool] = None  # 是否启用知识库（None 表示使用全局默认）
+    kb_id: Optional[str] = None  # 知识库 ID（None 表示使用全局默认）
+    top_k: Optional[int] = None  # 检索结果数量（None 表示使用全局默认）
+
+
 class GroupConfig(BaseModel):
     """群组配置"""
     trigger_config: Optional[IntelligentTriggerConfig] = None  # 该群的智能触发配置（覆盖默认）
     reply_mode_config: Optional[ReplyModeConfig] = None  # 该群的简洁模式配置（覆盖默认）
+    kb_config: Optional[KnowledgeBaseConfig] = None  # 该群的知识库配置（覆盖默认）
 
 
 class Config(BaseModel):
@@ -71,6 +79,13 @@ class Config(BaseModel):
     vision_model: str = os.getenv("VISION_MODEL", "gpt-4o-mini")  # Vision 模型名称
     vision_api_key: str = ""  # Vision API Key（动态从供应商的配置中获取）
     vision_base_url: str = os.getenv("VISION_BASE_URL", "")  # Vision API 基础 URL（可选）
+
+    # ========== 知识库配置 ==========
+    knowledge_base_enabled: bool = os.getenv("KNOWLEDGE_BASE_ENABLED", "false").lower() == "true"  # 是否启用知识库
+    knowledge_base_dir: str = os.getenv("KNOWLEDGE_BASE_DIR", "data/knowledge_bases")  # 知识库存储目录
+    knowledge_base_default_kb_id: str = os.getenv("KNOWLEDGE_BASE_DEFAULT_KB_ID", "game_terraria")  # 默认知识库 ID
+    knowledge_base_top_k: int = int(os.getenv("KNOWLEDGE_BASE_TOP_K", "3"))  # 检索结果数量
+    knowledge_base_cache_ttl: int = int(os.getenv("KNOWLEDGE_BASE_CACHE_TTL", "300"))  # 缓存过期时间（秒）
 
     # API 配置（已废弃，但保留兼容）
     openclaw_api_url: str = os.getenv("OPENCLAW_API_URL", "http://localhost:8000/api/openclaw/chat")
@@ -189,6 +204,51 @@ class Config(BaseModel):
         """移除群组的简洁模式配置（恢复全局默认）"""
         if group_id in self._group_configs and self._group_configs[group_id].reply_mode_config:
             self._group_configs[group_id].reply_mode_config.reply_mode = None
+            self.save_group_configs()
+
+    def get_group_kb_config(self, group_id: str) -> KnowledgeBaseConfig:
+        """获取群组的知识库配置（如果未配置则使用默认配置）"""
+        if group_id in self._group_configs and self._group_configs[group_id].kb_config:
+            group_kb_config = self._group_configs[group_id].kb_config
+            # 返回配置（None 表示使用全局默认）
+            return group_kb_config
+
+        # 返回默认配置
+        return KnowledgeBaseConfig(
+            enabled=self.knowledge_base_enabled,
+            kb_id=self.knowledge_base_default_kb_id,
+            top_k=self.knowledge_base_top_k
+        )
+
+    def set_group_kb_config(self, group_id: str, kb_config: KnowledgeBaseConfig):
+        """设置群组的知识库配置"""
+        if group_id not in self._group_configs:
+            self._group_configs[group_id] = GroupConfig()
+        self._group_configs[group_id].kb_config = kb_config
+        self.save_group_configs()
+
+    def get_group_kb_id(self, group_id: str) -> Optional[str]:
+        """获取群组的知识库 ID（如果未配置或未启用则返回 None）"""
+        kb_config = self.get_group_kb_config(group_id)
+
+        if kb_config.enabled and kb_config.kb_id:
+            return kb_config.kb_id
+
+        return None
+
+    def get_group_kb_top_k(self, group_id: str) -> int:
+        """获取群组的知识库检索结果数量"""
+        kb_config = self.get_group_kb_config(group_id)
+
+        if kb_config.top_k:
+            return kb_config.top_k
+
+        return self.knowledge_base_top_k
+
+    def remove_group_kb_config(self, group_id: str):
+        """移除群组的知识库配置（恢复全局默认）"""
+        if group_id in self._group_configs and self._group_configs[group_id].kb_config:
+            del self._group_configs[group_id].kb_config
             self.save_group_configs()
 
     def remove_group_config(self, group_id: str):

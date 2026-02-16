@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-OpenClaw AI 处理模块（支持多模型 + 对话记忆）
+OpenClaw AI 处理模块（支持多模型 + 对话记忆 + 知识库检索）
 支持：智谱 AI、DeepSeek、硅基流动、Ollama 本地模型等
 """
 
@@ -13,6 +13,16 @@ from nonebot.log import logger
 
 # 导入对话记忆模块
 from .conversation_memory import get_memory_manager, init_memory_manager
+
+# 导入知识库模块
+try:
+    from .knowledge_base_manager import KnowledgeBaseManager
+    from .vector_database_manager import VectorDatabaseManager
+    from .knowledge_base_retriever import KnowledgeBaseRetriever, SearchContext
+    KNOWLEDGE_BASE_AVAILABLE = True
+except ImportError:
+    KNOWLEDGE_BASE_AVAILABLE = False
+    logger.warning("⚠️  知识库模块未安装，知识库功能将不可用")
 
 
 # 支持的模型配置
@@ -128,6 +138,109 @@ MODEL_CONFIGS = {
 }
 
 
+# ========== 知识库管理器（全局单例） ==========
+_kb_manager: Optional[KnowledgeBaseManager] = None
+_vdb_manager: Optional[VectorDatabaseManager] = None
+_retriever: Optional[KnowledgeBaseRetriever] = None
+
+
+def init_knowledge_base(kb_dir: str = "data/knowledge_bases"):
+    """初始化知识库"""
+    global _kb_manager, _vdb_manager, _retriever
+
+    if not KNOWLEDGE_BASE_AVAILABLE:
+        logger.warning("⚠️  知识库模块未可用，跳过初始化")
+        return
+
+    try:
+        _kb_manager = KnowledgeBaseManager(kb_dir=kb_dir)
+        _vdb_manager = VectorDatabaseManager(kb_dir=kb_dir)
+        _retriever = KnowledgeBaseRetriever(cache_ttl=300, cache_size=1000)
+
+        logger.info("✅ 知识库初始化成功")
+    except Exception as e:
+        logger.error(f"❌ 知识库初始化失败: {e}")
+        _kb_manager = None
+        _vdb_manager = None
+        _retriever = None
+
+
+def get_knowledge_base() -> tuple:
+    """
+    获取知识库管理器
+
+    Returns:
+        tuple: (kb_manager, vdb_manager, retriever)
+    """
+    return _kb_manager, _vdb_manager, _retriever
+
+
+async def retrieve_from_knowledge_base(
+    query: str,
+    kb_id: str,
+    top_k: int = 3,
+    use_cache: bool = True
+) -> Optional[str]:
+    """
+    从知识库检索相关内容
+
+    Args:
+        query: 查询文本
+        kb_id: 知识库 ID
+        top_k: 返回结果数量
+        use_cache: 是否使用缓存
+
+    Returns:
+        str: 检索结果（失败则返回 None）
+    """
+    global _kb_manager, _vdb_manager, _retriever
+
+    # 检查知识库是否可用
+    if not KNOWLEDGE_BASE_AVAILABLE or _kb_manager is None or _vdb_manager is None or _retriever is None:
+        return None
+
+    try:
+        # 检查知识库是否存在
+        if not _kb_manager.exists(kb_id):
+            logger.warning(f"⚠️  知识库不存在: {kb_id}")
+            return None
+
+        # 检查知识库是否准备就绪
+        if not _kb_manager.is_ready(kb_id):
+            logger.warning(f"⚠️  知识库未准备就绪: {kb_id}")
+            return None
+
+        # 创建检索上下文
+        context = SearchContext(
+            query=query,
+            kb_id=kb_id,
+            top_k=top_k,
+            sort_by="score",
+            use_cache=use_cache
+        )
+
+        # 执行检索
+        results = await _retriever.retrieve(_vdb_manager, context)
+
+        if not results:
+            logger.info(f"ℹ️  知识库检索无结果: {kb_id}")
+            return None
+
+        # 格式化检索结果
+        context_text = "\n\n".join([
+            f"【{i + 1}】{result['text']}\n来源: {result['metadata'].get('source', 'N/A')}"
+            for i, result in enumerate(results)
+        ])
+
+        logger.info(f"✅ 知识库检索成功: {kb_id}, 结果数: {len(results)}")
+
+        return context_text
+
+    except Exception as e:
+        logger.error(f"❌ 知识库检索失败: {e}")
+        return None
+
+
 async def process_message_with_ai(
     message: str,
     user_id: str,
@@ -222,6 +335,38 @@ async def process_message_with_ai(
     if use_concise:
         logger.info("📝 使用简洁回复模式")
 
+    # ========== 知识库检索功能 ==========
+    kb_context = None
+
+    if config.knowledge_base_enabled and KNOWLEDGE_BASE_AVAILABLE:
+        try:
+            # 获取群组的知识库 ID
+            kb_id = config.get_group_kb_id(group_id) if group_id else None
+
+            if kb_id:
+                # 获取群组的 top_k 配置
+                top_k = config.get_group_kb_top_k(group_id)
+
+                logger.info(f"🔍 正在检索知识库: {kb_id}, top_k={top_k}")
+
+                # 从知识库检索
+                kb_context = await retrieve_from_knowledge_base(
+                    query=message,
+                    kb_id=kb_id,
+                    top_k=top_k,
+                    use_cache=True
+                )
+
+                if kb_context:
+                    logger.info(f"✅ 知识库检索成功，上下文长度: {len(kb_context)}")
+                else:
+                    logger.info(f"ℹ️  知识库检索无结果: {kb_id}")
+            else:
+                logger.debug("ℹ️  未配置知识库，跳过检索")
+
+        except Exception as e:
+            logger.error(f"❌ 知识库检索失败: {e}")
+
     # 调用对应的 AI 模型
     try:
         if model == "ollama":
@@ -229,14 +374,16 @@ async def process_message_with_ai(
                 message, user_id, context, group_id,
                 model_config, selected_model,
                 reply_mode="concise" if use_concise else reply_mode,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                kb_context=kb_context
             )
         else:
             reply = await _call_openai_compatible(
                 message, user_id, context, group_id,
                 model_config, selected_model, api_key,
                 reply_mode="concise" if use_concise else reply_mode,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                kb_context=kb_context
             )
 
         if reply and not reply.startswith("抱歉"):
@@ -294,7 +441,8 @@ async def _call_openai_compatible(
     selected_model: str,
     api_key: str,
     reply_mode: str = "normal",
-    conversation_history: Optional[list] = None
+    conversation_history: Optional[list] = None,
+    kb_context: Optional[str] = None
 ) -> str:
     """
     调用 OpenAI 兼容的 API（智谱/DeepSeek/硅基流动/Moonshot/OhMyGPT）
@@ -309,6 +457,7 @@ async def _call_openai_compatible(
         api_key: API Key
         reply_mode: 回复模式（normal/concise/detailed）
         conversation_history: 对话历史（记忆）
+        kb_context: 知识库上下文（可选）
     """
 
     url = model_config["api_url"]
@@ -323,8 +472,13 @@ async def _call_openai_compatible(
     if conversation_history:
         messages.extend(conversation_history)
 
-    # 添加当前用户消息
-    messages.append({"role": "user", "content": message})
+    # 添加知识库上下文（如果有）
+    if kb_context:
+        # 将知识库上下文添加到用户消息之前
+        enhanced_message = f"参考以下信息来回答用户的问题：\n\n{kb_context}\n\n用户的问题：{message}"
+        messages.append({"role": "user", "content": enhanced_message})
+    else:
+        messages.append({"role": "user", "content": message})
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -387,7 +541,8 @@ async def _call_ollama(
     model_config: Dict[str, Any],
     selected_model: str,
     reply_mode: str = "normal",
-    conversation_history: Optional[list] = None
+    conversation_history: Optional[list] = None,
+    kb_context: Optional[str] = None
 ) -> str:
     """
     调用 Ollama 本地模型
@@ -401,6 +556,7 @@ async def _call_ollama(
         selected_model: 选中的模型
         reply_mode: 回复模式（normal/concise/detailed）
         conversation_history: 对话历史（记忆）
+        kb_context: 知识库上下文（可选）
     """
 
     url = model_config["api_url"]
@@ -415,8 +571,13 @@ async def _call_ollama(
     if conversation_history:
         messages.extend(conversation_history)
 
-    # 添加当前用户消息
-    messages.append({"role": "user", "content": message})
+    # 添加知识库上下文（如果有）
+    if kb_context:
+        # 将知识库上下文添加到用户消息之前
+        enhanced_message = f"参考以下信息来回答用户的问题：\n\n{kb_context}\n\n用户的问题：{message}"
+        messages.append({"role": "user", "content": enhanced_message})
+    else:
+        messages.append({"role": "user", "content": message})
 
     data = {
         "model": selected_model,
