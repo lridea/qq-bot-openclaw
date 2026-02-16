@@ -201,6 +201,15 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.7.0 (2026-02-16)
+- 📸 添加图片识别功能（Vision AI）
+- 🎨 创建独立的图片处理模块（image_processor.py）
+- 🤖 创建 Vision AI 客户端（vision_client.py）
+- ✨ 支持多种 Vision 模型（GPT-4V、Claude 3、GLM-4V、Gemini、Qwen-VL）
+- 🔧 使用 OneBot API 提取图片（URL/Base64/本地文件）
+- 📝 创建测试用例和开发记录文档
+- 🏗️ 模块化设计，便于后续扩展维护
+
 ### v1.6.0 (2026-02-16)
 - 🔐 添加超级管理员专用命令系统
 - 📊 添加 /status 命令查看系统状态
