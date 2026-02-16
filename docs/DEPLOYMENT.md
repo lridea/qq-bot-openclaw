@@ -357,10 +357,36 @@ LOG_FILE=logs/bot.log
 ```python
 from nonebot.permission import SUPERUSER
 
+# 超级管理员专用命令
+# /status - 查看系统状态
+# /switch - 切换 AI 供应商
+# /set_model - 设置具体模型
+# /restart - 重启机器人
+# /admin - 管理员帮助
+
 @cmd.handle(permission=SUPERUSER)
 async def handle():
     # 只有超级管理员可用
     pass
+```
+
+**超级管理员命令列表：**
+
+| 命令 | 说明 | 权限 |
+|--------|------|--------|
+| `/status` | 查看系统状态 | 超级管理员 |
+| `/switch <模型>` | 切换 AI 供应商 | 超级管理员 |
+| `/set_model <模型名>` | 设置具体模型 | 超级管理员 |
+| `/restart` | 重启机器人 | 超级管理员 |
+| `/admin` | 查看管理员帮助 | 超级管理员 |
+
+**使用示例：**
+```
+/status                # 查看系统状态
+/switch deepseek       # 切换到 DeepSeek
+/set_model gpt-4o-mini  # 设置为 GPT-4o-mini
+/restart              # 重启机器人
+/admin                # 查看管理员帮助
 ```
 
 ---

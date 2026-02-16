@@ -115,6 +115,28 @@ qq-bot-openclaw/
 
 ## 🔧 配置说明
 
+### 超级管理员配置
+
+**SUPERUSERS**: 超级管理员 QQ 号列表，可以执行管理命令
+
+**超级管理员专用命令：**
+
+| 命令 | 说明 |
+|--------|------|
+| `/status` | 查看系统状态（模型、配置、运行信息）|
+| `/switch <模型>` | 切换 AI 供应商（如 siliconflow、deepseek）|
+| `/set_model <模型名>` | 设置具体的 AI 模型（如 gpt-4o-mini）|
+| `/restart` | 重启机器人 |
+| `/admin` | 查看管理员帮助 |
+
+**使用示例：**
+```
+/status                # 查看系统状态
+/switch deepseek       # 切换到 DeepSeek
+/set_model gpt-4o-mini  # 设置为 GPT-4o-mini
+/restart              # 重启机器人
+```
+
 ### OpenClaw API 配置
 
 1. **API URL**: OpenClaw API 的地址（由 OpenClaw 提供）
@@ -178,6 +200,15 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 检查是否在群里 @机器人，或者私聊机器人。
 
 ## 📝 更新日志
+
+### v1.6.0 (2026-02-16)
+- 🔐 添加超级管理员专用命令系统
+- 📊 添加 /status 命令查看系统状态
+- 🔄 添加 /switch 命令动态切换 AI 供应商
+- ⚙️ 添加 /set_model 命令设置具体模型
+- 🔧 添加 /restart 命令重启机器人
+- 📚 添加 /admin 命令查看管理员帮助
+- 🛡️ 所有管理员命令仅超级管理员可用（permission=SUPERUSER）
 
 ### v1.5.0 (2026-02-16)
 - ✨ 大幅扩展硅基流动模型列表（从 3 个扩展到 30+ 个）
