@@ -179,6 +179,20 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.2.0 (2026-02-16)
+- ✨ 添加 OhMyGPT 模型支持（支持 GPT-3.5、GPT-4、GPT-4o 等模型）
+- 💫 更新机器人人设为"星野（Hoshino）"星际少女风格
+- 🎨 天蓝色长发、星空眼眸、温柔乖巧的性格设定
+- 📚 完善多模型配置文档
+- 🔧 更新所有回退回复为星野风格
+
+### v1.1.0 (2026-02-16)
+- ✨ 添加多模型支持（智谱 AI、DeepSeek、硅基流动、Moonshot、Ollama）
+- 🎁 支持完全免费的模型（硅基流动、Ollama）
+- 📊 添加 /model 和 /models 命令
+- 📚 创建详细的多模型配置文档
+- 🔧 实现自动回退机制
+
 ### v1.0.0 (2026-02-15)
 - ✨ 初始版本发布
 - ✅ 支持 QQ 群聊接入 OpenClaw
@@ -199,4 +213,4 @@ MIT License
 
 ---
 
-**Powered by NoneBot2 & OpenClaw** 🦞
+**Powered by NoneBot2 & 星野（Hoshino）** ✨💙
