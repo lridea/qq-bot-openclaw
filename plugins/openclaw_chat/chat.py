@@ -69,15 +69,38 @@ async def handle_chat(bot: Bot, event: Event):
         if image_data and image_data.has_data():
             # 有图片，使用 Vision AI 识别
             logger.info("📸 检测到图片，启动 Vision AI 识别...")
-            
+
+            # 检查 Vision AI 是否启用
+            if not config.vision_enabled:
+                logger.info("⚠️  Vision AI 已禁用")
+                await chat.send("抱歉，图片识别功能已禁用。")
+                return
+
             # 获取 Vision 模型配置
-            vision_model = config.model_name or "gpt-4o-mini"
-            
+            vision_provider = config.vision_provider
+            vision_model = config.vision_model or "gpt-4o-mini"
+            vision_api_key = config.get_vision_api_key()
+
+            # 检查 Vision API Key
+            if not vision_api_key:
+                logger.warning("⚠️  Vision AI API Key 未配置")
+                await chat.send(
+                    f"抱歉，Vision AI API Key 未配置。\n\n"
+                    f"请在 .env 文件中配置 {vision_provider.upper()}_API_KEY\n\n"
+                    f"推荐配置：\n"
+                    f"• OhMyGPT（推荐）：OHMYGPT_API_KEY=your_key_here\n"
+                    f"• 硅基流动（免费）：SILICONFLOW_API_KEY=your_key_here\n"
+                    f"• 智谱 AI：ZHIPU_API_KEY=your_key_here"
+                )
+                return
+
+            logger.info(f"🎨 Vision AI 配置: {vision_provider} - {vision_model}")
+
             # 创建 Vision AI 客户端
             vision_client = VisionAIClient(
-                api_key=config.current_api_key,
-                provider=config.ai_model,
-                base_url=None  # 使用默认 URL
+                api_key=vision_api_key,
+                provider=vision_provider,
+                base_url=config.vision_base_url or None
             )
             
             # 识别图片
@@ -417,6 +440,14 @@ async def handle_admin_help():
   • /set_model gpt-4o-mini - 设置为 GPT-4o-mini
   • /set_model glm-4.7 - 设置为 GLM-4.7
 
+【Vision AI 管理】
+• /vision_status 或 /视觉状态 - 查看 Vision AI 配置
+• /vision_enable 或 /视觉启用 - 启用 Vision AI
+• /vision_disable 或 /视觉禁用 - 禁用 Vision AI
+• /vision_set 或 /视觉设置 <provider> [model] - 设置 Vision AI 配置
+  • /vision_set ohmygpt gpt-4o - 设置为 OhMyGPT GPT-4o
+  • /vision_set siliconflow Qwen/Qwen2-VL-7B-Instruct - 设置为硅基流动 Qwen2-VL
+
 【智能触发管理】
 • /trigger_status 或 /触发状态 - 查看智能触发配置
 • /trigger_enable 或 /触发启用 <群号> - 启用群智能触发
@@ -436,6 +467,168 @@ async def handle_admin_help():
 💡 提示：使用 /help 查看所有命令
 """
     await admin_help_cmd.send(help_text)
+
+
+# ========== Vision AI 管理命令 ==========
+
+# Vision AI 状态命令
+vision_status_cmd = on_command("vision_status", aliases={"视觉状态", "vision_status", "视觉状态"}, priority=1, permission=SUPERUSER)
+
+
+@vision_status_cmd.handle()
+async def handle_vision_status():
+    """查看 Vision AI 配置（仅超级管理员）"""
+    from config import config
+
+    status_text = f"""
+🎨 Vision AI 状态 ✨💙
+
+【当前配置】
+• 启用状态: {'✅ 已启用' if config.vision_enabled else '❌ 已禁用'}
+• 供应商: {config.vision_provider}
+• 模型: {config.vision_model}
+• API 基础 URL: {config.vision_base_url or '（默认）'}
+
+【API Key 状态】
+• Vision API Key: {'✅ 已配置' if config.get_vision_api_key() else '❌ 未配置'}
+
+【支持的供应商】
+• ohmygpt - OhMyGPT（支持 GPT-4V 等模型）⭐ 推荐
+• siliconflow - 硅基流动（完全免费）
+• zhipu - 智谱 AI（GLM-4V）
+• openai - OpenAI（需要海外网络）
+• anthropic - Claude 3 Vision（暂不支持）
+
+【推荐配置】
+• OhMyGPT: VISION_PROVIDER=ohmygpt, VISION_MODEL=gpt-4o-mini
+• 硅基流动: VISION_PROVIDER=siliconflow, VISION_MODEL=Qwen/Qwen2-VL-7B-Instruct
+• 智谱 AI: VISION_PROVIDER=zhipu, VISION_MODEL=glm-4v
+
+💡 使用 /vision_set <provider> [model] 快速设置
+"""
+    await vision_status_cmd.send(status_text)
+
+
+# Vision AI 启用/禁用命令
+vision_enable_cmd = on_command("vision_enable", aliases={"视觉启用", "vision_enable"}, priority=1, permission=SUPERUSER)
+vision_disable_cmd = on_command("vision_disable", aliases={"视觉禁用", "vision_disable"}, priority=1, permission=SUPERUSER)
+
+
+@vision_enable_cmd.handle()
+async def handle_vision_enable():
+    """启用 Vision AI（仅超级管理员）"""
+    import os
+    from config import config
+
+    os.environ["VISION_ENABLED"] = "true"
+    config.vision_enabled = True
+
+    # 更新 .env 文件
+    env_file = ".env"
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        with open(env_file, "w", encoding="utf-8") as f:
+            for line in lines:
+                if line.startswith("VISION_ENABLED="):
+                    f.write("VISION_ENABLED=true\n")
+                else:
+                    f.write(line)
+
+    await vision_enable_cmd.send("✅ Vision AI 已启用！✨💙")
+
+
+@vision_disable_cmd.handle()
+async def handle_vision_disable():
+    """禁用 Vision AI（仅超级管理员）"""
+    import os
+    from config import config
+
+    os.environ["VISION_ENABLED"] = "false"
+    config.vision_enabled = False
+
+    # 更新 .env 文件
+    env_file = ".env"
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        with open(env_file, "w", encoding="utf-8") as f:
+            for line in lines:
+                if line.startswith("VISION_ENABLED="):
+                    f.write("VISION_ENABLED=false\n")
+                else:
+                    f.write(line)
+
+    await vision_disable_cmd.send("❌ Vision AI 已禁用！")
+
+
+# Vision AI 设置命令
+vision_set_cmd = on_command("vision_set", aliases={"视觉设置", "vision_set", "视觉设置"}, priority=1, permission=SUPERUSER)
+
+
+@vision_set_cmd.handle()
+async def handle_vision_set(event: Event):
+    """设置 Vision AI 配置（仅超级管理员）"""
+    import os
+    from config import config
+
+    args = event.get_plaintext().strip().split()
+
+    if len(args) < 2:
+        await vision_set_cmd.send(
+            "❌ 参数错误！\n\n"
+            "用法：/vision_set <provider> [model]\n\n"
+            "示例：\n"
+            "• /vision_set ohmygpt gpt-4o-mini\n"
+            "• /vision_set siliconflow Qwen/Qwen2-VL-7B-Instruct\n"
+            "• /vision_set zhipu glm-4v\n\n"
+            "支持的供应商：ohmygpt, siliconflow, zhipu"
+        )
+        return
+
+    provider = args[1]
+    model = args[2] if len(args) > 2 else None
+
+    # 验证供应商
+    valid_providers = ["openai", "anthropic", "google", "zhipu", "siliconflow", "ohmygpt"]
+    if provider not in valid_providers:
+        await vision_set_cmd.send(
+            f"❌ 不支持的供应商：{provider}\n\n"
+            f"支持的供应商：{', '.join(valid_providers)}"
+        )
+        return
+
+    # 更新环境变量
+    os.environ["VISION_PROVIDER"] = provider
+    config.vision_provider = provider
+
+    if model:
+        os.environ["VISION_MODEL"] = model
+        config.vision_model = model
+
+    # 更新 .env 文件
+    env_file = ".env"
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        with open(env_file, "w", encoding="utf-8") as f:
+            for line in lines:
+                if line.startswith("VISION_PROVIDER="):
+                    f.write(f"VISION_PROVIDER={provider}\n")
+                elif line.startswith("VISION_MODEL=") and model:
+                    f.write(f"VISION_MODEL={model}\n")
+                else:
+                    f.write(line)
+
+    reply = f"✅ Vision AI 配置已更新！✨💙\n\n"
+    reply += f"• 供应商: {provider}\n"
+    if model:
+        reply += f"• 模型: {model}\n"
+
+    await vision_set_cmd.send(reply)
 
 
 # ========== 智能触发功能 ==========

@@ -58,7 +58,14 @@ class Config(BaseModel):
     # Ollama 配置
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2")
-    
+
+    # ========== Vision AI 配置 ==========
+    vision_enabled: bool = os.getenv("VISION_ENABLED", "true").lower() == "true"  # 是否启用 Vision AI
+    vision_provider: str = os.getenv("VISION_PROVIDER", "openai")  # openai/anthropic/google/zhipu/siliconflow/ohmygpt
+    vision_model: str = os.getenv("VISION_MODEL", "gpt-4o-mini")  # Vision 模型名称
+    vision_api_key: str = ""  # Vision API Key（动态从供应商的配置中获取）
+    vision_base_url: str = os.getenv("VISION_BASE_URL", "")  # Vision API 基础 URL（可选）
+
     # API 配置（已废弃，但保留兼容）
     openclaw_api_url: str = os.getenv("OPENCLAW_API_URL", "http://localhost:8000/api/openclaw/chat")
     openclaw_api_timeout: int = int(os.getenv("OPENCLAW_API_TIMEOUT", "30"))
@@ -181,6 +188,23 @@ class Config(BaseModel):
             return None  # Ollama 不需要 API Key
         return None
     
+    def get_vision_api_key(self) -> str:
+        """获取 Vision API Key（根据 provider 自动选择）"""
+        provider_map = {
+            "openai": "ohmygpt_api_key",  # 使用 OhMyGPT 作为 OpenAI 的代理
+            "anthropic": "",  # Anthropic 暂不支持
+            "google": "",  # Google 暂不支持
+            "zhipu": "zhipu_api_key",
+            "siliconflow": "siliconflow_api_key",
+            "ohmygpt": "ohmygpt_api_key"
+        }
+        
+        key_field = provider_map.get(self.vision_provider, "")
+        if key_field:
+            return getattr(self, key_field, "")
+        
+        return ""
+
     def validate_config(self) -> bool:
         """验证配置是否完整"""
         # 检查是否有任何 API Key 配置
