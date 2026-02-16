@@ -326,6 +326,17 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.12.0 (2026-02-16) 📝 群组简洁模式配置
+- 🎯 添加群组级别的简洁模式配置支持
+- 📝 不同群聊可以有不同的简洁模式设置（normal/concise/detailed）
+- 🔧 扩展 GroupConfig 类，添加 ReplyModeConfig
+- 🔑 添加 get_group_reply_mode() 和 set_group_reply_mode() 方法
+- 🤖 修改 ai_processor.py，优先使用群组的简洁模式配置
+- 🛡️ 添加管理员命令（/reply_mode_status, /reply_mode_set, /reply_mode_reset, /reply_mode_list）
+- 📚 更新管理员帮助信息，添加简洁模式管理命令说明
+- 📖 创建群组简洁模式配置文档（docs/GROUP_REPLY_MODE.md）
+- 📊 配置优先级：群组配置 > 全局默认配置
+
 ### v1.11.1 (2026-02-16) 🌐 修复 Vision AI 回复英文问题
 - 🛠️ 修复 Vision AI 回复英文的问题
 - 💬 修改 Vision AI 提示词，明确要求用中文回复
