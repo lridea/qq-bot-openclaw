@@ -31,6 +31,8 @@ OpenClaw QQ Bot 支持多种 AI 模型，包括免费和付费选项。
 ```ini
 AI_MODEL=siliconflow
 SILICONFLOW_API_KEY=your_siliconflow_api_key_here
+# 可选：指定具体模型
+MODEL_NAME=Qwen/Qwen2.5-7B-Instruct
 ```
 
 **特点：**
@@ -38,6 +40,45 @@ SILICONFLOW_API_KEY=your_siliconflow_api_key_here
 - ✅ 支持多种开源模型
 - ✅ 无需充值
 - ✅ 性能不错
+
+**支持模型：**
+
+**DeepSeek 系列（高强度推理）：**
+- `deepseek-v3.2` - DeepSeek V3.2 最新版本（推荐）
+- `deepseek-v3.1-terminus` - DeepSeek V3.1 Terminus（增强版）
+- `deepseek-r1` - DeepSeek R1 推理模型
+
+**Qwen 系列（全尺寸、全模态）：**
+- `Qwen/Qwen3-72B-Instruct` - Qwen3 72B（最强）
+- `Qwen/Qwen3-14B-Instruct` - Qwen3 14B（平衡）
+- `Qwen/Qwen2.5-7B-Instruct` - Qwen 2.5 7B（轻量）
+- `Qwen/Qwen2.5-72B-Instruct` - Qwen 2.5 72B（最强）
+- `Qwen/Qwen2.5-32B-Instruct` - Qwen 2.5 32B（平衡）
+- `Qwen/Qwen2.5-Coder-7B-Instruct` - Qwen 代码模型
+- `Qwen/Qwen2.5-Coder-32B-Instruct` - Qwen 代码增强版
+
+**GLM 系列（中文理解强）：**
+- `THUDM/glm-4.7` - GLM 4.7 最新旗舰（推荐）
+- `THUDM/glm-4.6` - GLM 4.6
+- `THUDM/glm-4-9b-chat` - GLM 4 9B 轻量版
+- `THUDM/glm-z1-32b` - GLM Z1 32B
+
+**Kimi 系列（长上下文）：**
+- `kimi-k2-thinking` - Kimi K2 思维模型
+- `kimi-k2-instruct-0905` - Kimi K2 0905 指令模型（推荐）
+- `kimi-dev-72b` - Kimi Dev 72B
+- `moonshot-v1-8k` - Kimi V1 8K
+- `moonshot-v1-32k` - Kimi V1 32K
+- `moonshot-v1-128k` - Kimi V1 128K（超长文本）
+
+**MiniMax 系列：**
+- `MiniMax-M2.1` - MiniMax M2.1 Agent 专用模型
+
+**Llama 系列：**
+- `meta-llama/Meta-Llama-3-8B-Instruct` - Llama 3 8B
+- `meta-llama/Meta-Llama-3.1-8B-Instruct` - Llama 3.1 8B
+- `meta-llama/Meta-Llama-3.1-70B-Instruct` - Llama 3.1 70B
+- `meta-llama/Meta-Llama-3.1-405B-Instruct` - Llama 3.1 405B（最强）
 
 ---
 

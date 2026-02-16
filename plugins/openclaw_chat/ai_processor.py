@@ -36,8 +36,28 @@ MODEL_CONFIGS = {
     "siliconflow": {
         "name": "硅基流动",
         "api_url": "https://api.siliconflow.cn/v1/chat/completions",
-        "models": ["Qwen/Qwen2-7B-Instruct", "THUDM/glm-4-9b-chat", "meta-llama/Meta-Llama-3-8B-Instruct"],
-        "default_model": "Qwen/Qwen2-7B-Instruct",
+        "models": [
+            # DeepSeek 系列（高强度推理）
+            "deepseek-v3.2", "deepseek-v3.1-terminus", "deepseek-r1",
+            # Qwen 系列（全尺寸、全模态）
+            "Qwen/Qwen3-72B-Instruct", "Qwen/Qwen3-14B-Instruct",
+            "Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-72B-Instruct",
+            "Qwen/Qwen2.5-14B-Instruct", "Qwen/Qwen2.5-32B-Instruct",
+            "Qwen/Qwen2.5-Coder-7B-Instruct", "Qwen/Qwen2.5-Coder-32B-Instruct",
+            # GLM 系列（中文理解强）
+            "THUDM/glm-4-9b-chat", "THUDM/glm-4.7", "THUDM/glm-4.6", "THUDM/glm-z1-32b",
+            # Kimi 系列（长上下文）
+            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k",
+            "kimi-k2-thinking", "kimi-k2-instruct-0905", "kimi-dev-72b",
+            # MiniMax 系列
+            "MiniMax-M2.1",
+            # Llama 系列
+            "meta-llama/Meta-Llama-3-8B-Instruct",
+            "meta-llama/Meta-Llama-3.1-8B-Instruct",
+            "meta-llama/Meta-Llama-3.1-70B-Instruct",
+            "meta-llama/Meta-Llama-3.1-405B-Instruct"
+        ],
+        "default_model": "Qwen/Qwen2.5-7B-Instruct",
         "env_key": "SILICONFLOW_API_KEY",
         "free_tier": True,
         "free_quota": "完全免费",
