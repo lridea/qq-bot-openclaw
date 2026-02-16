@@ -18,7 +18,8 @@ class Config(BaseModel):
     """机器人配置"""
     
     # AI 模型配置
-    ai_model: str = os.getenv("AI_MODEL", "zhipu")  # zhipu/deepseek/siliconflow/ollama/moonshot
+    ai_model: str = os.getenv("AI_MODEL", "zhipu")  # zhipu/deepseek/siliconflow/ollama/moonshot/ohmygpt
+    model_name: str = os.getenv("MODEL_NAME", "")  # 指定具体模型（可选）
     
     # 智谱 AI 配置
     openclaw_api_key: str = os.getenv("OPENCLAW_API_KEY", "")  # 兼容旧配置
@@ -32,6 +33,9 @@ class Config(BaseModel):
     
     # Moonshot 配置
     moonshot_api_key: str = os.getenv("MOONSHOT_API_KEY", "")
+    
+    # OhMyGPT 配置
+    ohmygpt_api_key: str = os.getenv("OHMYGPT_API_KEY", "")
     
     # Ollama 配置
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -75,6 +79,8 @@ class Config(BaseModel):
             return self.siliconflow_api_key
         elif self.ai_model == "moonshot":
             return self.moonshot_api_key
+        elif self.ai_model == "ohmygpt":
+            return self.ohmygpt_api_key
         elif self.ai_model == "ollama":
             return None  # Ollama 不需要 API Key
         return None

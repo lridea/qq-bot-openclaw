@@ -66,12 +66,23 @@ MODEL_CONFIGS = {
     "ohmygpt": {
         "name": "OhMyGPT",
         "api_url": "https://api.ohmygpt.com/v1/chat/completions",
-        "models": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini"],
+        "models": [
+            # GPT 系列
+            "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+            # Claude 系列
+            "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307",
+            # Kimi 系列
+            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k",
+            # GLM 系列
+            "glm-4", "glm-4-flash", "glm-4-plus",
+            # 其他
+            "gemini-pro", "llama-3-70b"
+        ],
         "default_model": "gpt-4o-mini",
         "env_key": "OHMYGPT_API_KEY",
         "free_tier": True,
         "free_quota": "按使用计费",
-        "description": "OhMyGPT 中转服务，支持 GPT 系列模型"
+        "description": "OhMyGPT 中转服务，支持 GPT/Claude/Kimi/GLM 等多系列模型"
     }
 }
 
@@ -82,6 +93,7 @@ async def process_message_with_ai(
     context: str = "qq_group",
     group_id: Optional[str] = None,
     model: str = "zhipu",
+    model_name: Optional[str] = None,
     api_key: Optional[str] = None
 ) -> str:
     """
@@ -93,6 +105,7 @@ async def process_message_with_ai(
         context: 上下文类型
         group_id: 群号（如果是群聊）
         model: 模型名称（zhipu/deepseek/siliconflow/ollama/moonshot/ohmygpt）
+        model_name: 具体模型名称（可选，如果未提供则使用默认模型）
         api_key: API Key（可选，如果未提供则从环境变量读取）
     
     Returns:
@@ -105,6 +118,17 @@ async def process_message_with_ai(
         logger.error(f"❌ 不支持的模型: {model}")
         return generate_fallback_reply(message)
     
+    # 确定使用的具体模型
+    selected_model = model_name if model_name else model_config["default_model"]
+    
+    # 验证模型是否在支持的列表中
+    if selected_model not in model_config["models"]:
+        logger.warning(f"⚠️  模型 {selected_model} 不在 {model_config['name']} 的支持列表中")
+        logger.warning(f"   将使用默认模型: {model_config['default_model']}")
+        selected_model = model_config["default_model"]
+    
+    logger.info(f"🤖 使用模型: {model_config['name']} - {selected_model}")
+    
     # 获取 API Key
     if not api_key and model_config["env_key"]:
         api_key = os.getenv(model_config["env_key"], "")
@@ -112,11 +136,11 @@ async def process_message_with_ai(
     # 调用对应的 AI 模型
     try:
         if model == "ollama":
-            reply = await _call_ollama(message, user_id, context, group_id, model_config)
+            reply = await _call_ollama(message, user_id, context, group_id, model_config, selected_model)
         else:
             reply = await _call_openai_compatible(
                 message, user_id, context, group_id, 
-                model_config, api_key
+                model_config, selected_model, api_key
             )
         
         if reply and not reply.startswith("抱歉"):
@@ -134,14 +158,14 @@ async def _call_openai_compatible(
     context: str,
     group_id: Optional[str],
     model_config: Dict[str, Any],
+    selected_model: str,
     api_key: str
 ) -> str:
     """
-    调用 OpenAI 兼容的 API（智谱/DeepSeek/硅基流动/Moonshot）
+    调用 OpenAI 兼容的 API（智谱/DeepSeek/硅基流动/Moonshot/OhMyGPT）
     """
     
     url = model_config["api_url"]
-    model_name = model_config["default_model"]
     
     # 系统提示词
     system_prompt = _build_system_prompt(user_id, context, group_id)
@@ -152,7 +176,7 @@ async def _call_openai_compatible(
     }
     
     data = {
-        "model": model_name,
+        "model": selected_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": message}
@@ -199,20 +223,20 @@ async def _call_ollama(
     user_id: str,
     context: str,
     group_id: Optional[str],
-    model_config: Dict[str, Any]
+    model_config: Dict[str, Any],
+    selected_model: str
 ) -> str:
     """
     调用 Ollama 本地模型
     """
     
     url = model_config["api_url"]
-    model_name = model_config["default_model"]
     
     # 系统提示词
     system_prompt = _build_system_prompt(user_id, context, group_id)
     
     data = {
-        "model": model_name,
+        "model": selected_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": message}

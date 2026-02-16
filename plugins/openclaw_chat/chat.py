@@ -59,6 +59,7 @@ async def handle_chat(bot: Bot, event: Event):
             context="qq_group" if group_id else "qq_private",
             group_id=group_id,
             model=config.ai_model,  # 使用配置的模型
+            model_name=config.model_name if config.model_name else None,  # 使用配置的具体模型
             api_key=config.current_api_key  # 使用配置的 API Key
         )
         
@@ -102,6 +103,7 @@ async def handle_chat_cmd(bot: Bot, event: Event, args: Message = CommandArg()):
             context="qq_group" if group_id else "qq_private",
             group_id=group_id,
             model=config.ai_model,
+            model_name=config.model_name if config.model_name else None,
             api_key=config.current_api_key
         )
         

@@ -132,20 +132,43 @@ MOONSHOT_API_KEY=your_moonshot_api_key_here
 ```ini
 AI_MODEL=ohmygpt
 OHMYGPT_API_KEY=your_ohmygpt_api_key_here
+# 可选：指定具体模型
+MODEL_NAME=gpt-4o-mini
 ```
 
 **特点：**
-- ✅ 支持 GPT-3.5、GPT-4、GPT-4-turbo、GPT-4o 等模型
+- ✅ 支持 GPT、Claude、Kimi、GLM 等多系列模型
 - ✅ 中转服务，访问稳定
 - ⚠️ 按使用量计费
-- ✅ 适合需要 GPT 系列模型的场景
+- ✅ 适合需要多种模型切换的场景
 
 **支持模型：**
+
+**GPT 系列：**
 - `gpt-4o-mini` - 推荐使用，性价比高
 - `gpt-3.5-turbo` - 速度快，价格便宜
 - `gpt-4` - 性能最强
 - `gpt-4-turbo` - GPT-4 增强版
 - `gpt-4o` - OpenAI 最新模型
+
+**Claude 系列：**
+- `claude-3-opus-20240229` - 最强性能
+- `claude-3-sonnet-20240229` - 平衡性能和价格
+- `claude-3-haiku-20240307` - 速度快，价格低
+
+**Kimi 系列：**
+- `moonshot-v1-8k` - 8k 上下文
+- `moonshot-v1-32k` - 32k 上下文
+- `moonshot-v1-128k` - 128k 上下文（超长文本）
+
+**GLM 系列：**
+- `glm-4` - 智谱 GLM-4
+- `glm-4-flash` - 快速版本
+- `glm-4-plus` - 增强版本
+
+**其他：**
+- `gemini-pro` - Google Gemini
+- `llama-3-70b` - Meta Llama 3
 
 ---
 
@@ -178,12 +201,20 @@ OPENCLAW_API_KEY=your_zhipu_api_key_here
 # 选择要使用的模型
 AI_MODEL=siliconflow
 
+# 可选：指定具体模型（不填则使用默认模型）
+MODEL_NAME=Qwen/Qwen2-7B-Instruct
+
 # 硅基流动（推荐）
 SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxxxxx
 
 # 或者使用 DeepSeek
 # AI_MODEL=deepseek
 # DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
+
+# 或者使用 OhMyGPT（支持多系列模型）
+# AI_MODEL=ohmygpt
+# OHMYGPT_API_KEY=sk-xxxxxxxxxxxxxxxx
+# MODEL_NAME=gpt-4o-mini  # 可以指定 GPT/Claude/Kimi/GLM 等模型
 
 # 或者使用 Ollama 本地
 # AI_MODEL=ollama
@@ -192,6 +223,41 @@ SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxxxxx
 # 超级管理员 QQ 号
 SUPERUSERS=["123456789"]
 ```
+
+### MODEL_NAME 配置说明
+
+**MODEL_NAME** 是可选配置项，用于指定具体使用的模型。
+
+**使用场景：**
+
+1. **OhMyGPT - 切换不同系列模型**
+   ```ini
+   AI_MODEL=ohmygpt
+   MODEL_NAME=gpt-4o           # 使用 GPT-4o
+   # MODEL_NAME=claude-3-opus  # 或使用 Claude
+   # MODEL_NAME=glm-4          # 或使用 GLM
+   # MODEL_NAME=moonshot-v1-128k  # 或使用 Kimi
+   ```
+
+2. **硅基流动 - 选择不同开源模型**
+   ```ini
+   AI_MODEL=siliconflow
+   MODEL_NAME=Qwen/Qwen2-7B-Instruct  # 通义千问
+   # MODEL_NAME=THUDM/glm-4-9b-chat   # 或使用 GLM
+   # MODEL_NAME=meta-llama/Meta-Llama-3-8B-Instruct  # 或使用 Llama
+   ```
+
+3. **智谱 AI - 选择不同 GLM 模型**
+   ```ini
+   AI_MODEL=zhipu
+   MODEL_NAME=glm-4-flash  # 快速版本
+   # MODEL_NAME=glm-4      # 标准版本
+   # MODEL_NAME=glm-4-plus # 增强版本
+   ```
+
+**如果不配置 MODEL_NAME：**
+- 会使用供应商的默认模型
+- 例如：OhMyGPT 默认使用 `gpt-4o-mini`
 
 ---
 
