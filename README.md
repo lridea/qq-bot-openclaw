@@ -326,6 +326,15 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.11.1 (2026-02-16) 🌐 修复 Vision AI 回复英文问题
+- 🛠️ 修复 Vision AI 回复英文的问题
+- 💬 修改 Vision AI 提示词，明确要求用中文回复
+- 🔧 同步修复普通对话和智能触发中的 Vision AI 调用（2处）
+- 📝 添加日志输出，方便调试
+- ✨ 使用双重中文提示（开头 + 结尾强调）
+- 📚 创建修复说明文档（docs/VISION_CHINESE_FIX.md）
+- 🎯 优化智能触发中的 Vision AI 调用，使用独立配置
+
 ### v1.11.0 (2026-02-16) 🎨 Vision AI 独立配置
 - 🎯 将 Vision AI 模型配置从文本对话模型配置中分离
 - ✨ 支持独立的 Vision AI 配置系统
