@@ -326,6 +326,15 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.13.0 (2026-02-16) 🎨 Vision AI 应用人设
+- 🎭 修改 Vision AI 调用，支持系统提示词（system_prompt）
+- ✨ 在 Vision AI 中应用星野人设
+- 🔄 同步修复普通对话和智能触发中的 Vision AI 调用（2处）
+- 📝 添加日志输出，方便调试
+- 💙 改进 Vision AI 回复，使其更生动丰富
+- 📚 创建修复说明文档（docs/VISION_PERSONA_FIX.md）
+- 🌟 修复 Vision AI 回复简短、没有人设风格的问题
+
 ### v1.12.0 (2026-02-16) 📝 群组简洁模式配置
 - 🎯 添加群组级别的简洁模式配置支持
 - 📝 不同群聊可以有不同的简洁模式设置（normal/concise/detailed）
