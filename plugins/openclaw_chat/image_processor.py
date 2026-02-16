@@ -43,7 +43,9 @@ VISION_MODELS = {
         "support_vision": False  # DeepSeek 可能不支持 vision
     },
     "siliconflow": {
-        "models": ["Qwen/Qwen2-VL-7B-Instruct", "Qwen/Qwen2-VL-72B-Instruct"],
+        "models": ["Qwen/Qwen2-VL-7B-Instruct", "Qwen/Qwen2-VL-72B-Instruct", 
+                    "PaddlePaddle/PaddleOCR-VL-1.5", "PaddlePaddle/PaddleOCR-VL",
+                    "THUDM/GLM-4.1V-9B-Thinking", "deepseek-ai/DeepSeek-OCR"],
         "api_type": "openai_compatible",
         "support_vision": True
     }
