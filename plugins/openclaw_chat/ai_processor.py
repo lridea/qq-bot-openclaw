@@ -67,22 +67,37 @@ MODEL_CONFIGS = {
         "name": "OhMyGPT",
         "api_url": "https://api.ohmygpt.com/v1/chat/completions",
         "models": [
+            # GLM 系列
+            "glm-4", "glm-4-flash", "glm-4-plus", "glm-4.7", "glm-4.5", "glm-4.5-air", "glm-4.5-x",
+            # Kimi 系列
+            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k", "kimi-k2", "kimi-k2-0905",
             # GPT 系列
             "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+            "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5-pro",
             # Claude 系列
             "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307",
-            # Kimi 系列
-            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k",
-            # GLM 系列
-            "glm-4", "glm-4-flash", "glm-4-plus",
+            "claude-3.5-sonnet", "claude-3.5-haiku", "claude-3.5-opus",
+            "claude-4-opus", "claude-4-sonnet", "claude-4-haiku", "claude-4.1-opus", "claude-4.1-sonnet",
+            # DeepSeek 系列
+            "deepseek-v3", "deepseek-v3.1", "deepseek-v3.1-terminus",
+            # Qwen 系列
+            "qwen2.5-7b", "qwen2.5-72b", "qwen3-235b", "qwen3-thinking", "qwen3-coder",
+            # Gemini 系列
+            "gemini-pro", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash", "gemini-3-pro",
+            # Llama 系列
+            "llama-3-70b", "llama-3.1-8b", "llama-3.1-70b", "llama-3.1-405b", "llama-3.3-70b", "llama-4",
+            # Grok 系列
+            "grok-2", "grok-3", "grok-3-mini", "grok-4", "grok-4-fast",
+            # Doubao 系列
+            "doubao-1.6", "doubao-seed-1.6-fast", "doubao-pro-1.5",
             # 其他
-            "gemini-pro", "llama-3-70b"
+            "llama-3-70b", "gemini-pro"
         ],
         "default_model": "gpt-4o-mini",
         "env_key": "OHMYGPT_API_KEY",
         "free_tier": True,
         "free_quota": "按使用计费",
-        "description": "OhMyGPT 中转服务，支持 GPT/Claude/Kimi/GLM 等多系列模型"
+        "description": "OhMyGPT 中转服务，支持 GPT/Claude/Kimi/GLM/Qwen/Gemini/Llama/Grok 等多系列模型"
     }
 }
 

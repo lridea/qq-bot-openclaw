@@ -150,25 +150,79 @@ MODEL_NAME=gpt-4o-mini
 - `gpt-4` - 性能最强
 - `gpt-4-turbo` - GPT-4 增强版
 - `gpt-4o` - OpenAI 最新模型
+- `gpt-4.1` - GPT-4.1 增强版
+- `gpt-4.1-mini` - GPT-4.1 轻量版
+- `gpt-5` - GPT-5 最新旗舰模型
+- `gpt-5-mini` - GPT-5 轻量版
+- `gpt-5-nano` - GPT-5 最快版本
 
-**Claude 系列：**
-- `claude-3-opus-20240229` - 最强性能
-- `claude-3-sonnet-20240229` - 平衡性能和价格
-- `claude-3-haiku-20240307` - 速度快，价格低
+**GLM 系列：**
+- `glm-4.7` - 智谱最新旗舰模型（推荐）
+- `glm-4.5` - GLM-4.5 智能体模型
+- `glm-4.5-air` - GLM-4.5 高速推理版
+- `glm-4.5-x` - GLM-4.5 性能增强版
+- `glm-4` - GLM-4 标准版
+- `glm-4-flash` - GLM-4 快速版
+- `glm-4-plus` - GLM-4 增强版
 
 **Kimi 系列：**
+- `kimi-k2-0905` - Kimi K2 最新版本（推荐）
+- `kimi-k2` - Kimi K2 混合专家模型
 - `moonshot-v1-8k` - 8k 上下文
 - `moonshot-v1-32k` - 32k 上下文
 - `moonshot-v1-128k` - 128k 上下文（超长文本）
 
-**GLM 系列：**
-- `glm-4` - 智谱 GLM-4
-- `glm-4-flash` - 快速版本
-- `glm-4-plus` - 增强版本
+**Claude 系列：**
+- `claude-4.1-opus` - Claude 4.1 Opus（最强）
+- `claude-4.1-sonnet` - Claude 4.1 Sonnet（平衡）
+- `claude-4-opus` - Claude 4 Opus
+- `claude-4-sonnet` - Claude 4 Sonnet
+- `claude-4-haiku` - Claude 4 Haiku（最快）
+- `claude-3.5-opus` - Claude 3.5 Opus
+- `claude-3.5-sonnet` - Claude 3.5 Sonnet
+- `claude-3.5-haiku` - Claude 3.5 Haiku
+
+**DeepSeek 系列：**
+- `deepseek-v3.1-terminus` - DeepSeek V3.1 Terminus（增强版）
+- `deepseek-v3.1` - DeepSeek V3.1
+- `deepseek-v3` - DeepSeek V3
+
+**Qwen 系列：**
+- `qwen3-235b` - Qwen3 最新旗舰（推荐）
+- `qwen3-thinking` - Qwen3 思维模型
+- `qwen3-coder` - Qwen3 代码模型
+- `qwen2.5-7b` - Qwen 2.5 轻量版
+- `qwen2.5-72b` - Qwen 2.5 增强版
+
+**Gemini 系列：**
+- `gemini-3-pro` - Gemini 3 Pro（最强）
+- `gemini-3-flash` - Gemini 3 Flash（快速）
+- `gemini-2.5-pro` - Gemini 2.5 Pro
+- `gemini-2.5-flash` - Gemini 2.5 Flash
+- `gemini-2.0-flash` - Gemini 2.0 Flash
+
+**Llama 系列：**
+- `llama-4` - Meta Llama 4（最新）
+- `llama-3.3-70b` - Llama 3.3 70B
+- `llama-3.1-405b` - Llama 3.1 405B（最强）
+- `llama-3.1-70b` - Llama 3.1 70B
+- `llama-3.1-8b` - Llama 3.1 8B（轻量）
+- `llama-3-70b` - Llama 3 70B
+
+**Grok 系列：**
+- `grok-4` - Grok 4 最新版本
+- `grok-4-fast` - Grok 4 快速版
+- `grok-3` - Grok 3
+- `grok-3-mini` - Grok 3 Mini
+- `grok-2` - Grok 2
+
+**Doubao 系列：**
+- `doubao-pro-1.5` - Doubao 专业版
+- `doubao-seed-1.6-fast` - Doubao Seed 1.6 快速版
+- `doubao-1.6` - Doubao 1.6 标准版
 
 **其他：**
-- `gemini-pro` - Google Gemini
-- `llama-3-70b` - Meta Llama 3
+- `gemini-pro` - Google Gemini Pro
 
 ---
 
