@@ -25,3 +25,6 @@ uvicorn>=0.23.0
 
 # Windows 鍏煎鎬?
 pywin32>=305; sys_platform == 'win32'
+
+# Chroma 向量数据库（用于知识库）
+chromadb>=0.4.0
