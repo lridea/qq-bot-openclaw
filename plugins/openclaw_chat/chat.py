@@ -102,9 +102,15 @@ async def handle_chat(bot: Bot, event: Event):
                 provider=vision_provider,
                 base_url=config.vision_base_url or None
             )
-            
-            # 识别图片
-            prompt = f"请识别这张图片，并结合用户的问题回答：{message}" if message else "请描述这张图片的内容"
+
+            # 识别图片（明确要求用中文回复）
+            if message:
+                prompt = f"请用中文识别这张图片，并结合用户的问题回答：{message}\n\n重要：请务必用中文回复，不要用英文。"
+            else:
+                prompt = "请用中文描述这张图片的内容。\n\n重要：请务必用中文回复，不要用英文。"
+
+            logger.info(f"🎨 Vision AI 提示词: {prompt}")
+
             reply = await vision_client.recognize_image(
                 image_data=image_data,
                 prompt=prompt,
@@ -682,15 +688,43 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
         if image_data and image_data.has_data():
             # 有图片，使用 Vision AI 识别
             logger.info("📸 检测到图片，启动 Vision AI 识别...")
-            
-            vision_model = config.model_name or "gpt-4o-mini"
+
+            # 检查 Vision AI 是否启用
+            if not config.vision_enabled:
+                logger.info("⚠️  Vision AI 已禁用")
+                await intelligent_chat.send("抱歉，图片识别功能已禁用。")
+                return
+
+            # 获取 Vision 模型配置
+            vision_provider = config.vision_provider
+            vision_model = config.vision_model or "gpt-4o-mini"
+            vision_api_key = config.get_vision_api_key()
+
+            # 检查 Vision API Key
+            if not vision_api_key:
+                logger.warning("⚠️  Vision AI API Key 未配置")
+                await intelligent_chat.send(
+                    f"抱歉，Vision AI API Key 未配置。\n\n"
+                    f"请在 .env 文件中配置 {vision_provider.upper()}_API_KEY"
+                )
+                return
+
+            logger.info(f"🎨 Vision AI 配置: {vision_provider} - {vision_model}")
+
             vision_client = VisionAIClient(
-                api_key=config.current_api_key,
-                provider=config.ai_model,
-                base_url=None
+                api_key=vision_api_key,
+                provider=vision_provider,
+                base_url=config.vision_base_url or None
             )
-            
-            prompt = f"请识别这张图片，并结合用户的问题回答：{message}" if message else "请描述这张图片的内容"
+
+            # 识别图片（明确要求用中文回复）
+            if message:
+                prompt = f"请用中文识别这张图片，并结合用户的问题回答：{message}\n\n重要：请务必用中文回复，不要用英文。"
+            else:
+                prompt = "请用中文描述这张图片的内容。\n\n重要：请务必用中文回复，不要用英文。"
+
+            logger.info(f"🎨 Vision AI 提示词: {prompt}")
+
             reply = await vision_client.recognize_image(
                 image_data=image_data,
                 prompt=prompt,
