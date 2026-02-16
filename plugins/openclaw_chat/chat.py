@@ -671,22 +671,53 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
         # 只处理群聊消息
         if not hasattr(event, "group_id"):
             return
-        
+
         group_id = str(event.group_id)
         message = str(event.get_message()).strip()
         user_id = event.get_user_id()
-        
+
         # 过滤空消息和命令
         if not message or message.startswith(('/', '.', '。', '！', '!')):
             return
-        
+
+        # ========== 检查是否@了其他人 ==========
+        # 如果消息中@了其他人（非机器人），则不触发智能回复
+        from nonebot.adapters.onebot.v11 import Message, MessageSegment
+
+        message_obj = event.get_message()
+
+        # 检查消息中是否有@片段
+        has_at_other = False
+        bot_self_id = str(bot.self_id) if hasattr(bot, 'self_id') else None
+
+        for segment in message_obj:
+            if segment.type == 'at':
+                # 获取@的QQ号
+                at_qq = segment.data.get('qq')
+
+                # 如果@的不是机器人自己，则标记为@了其他人
+                if at_qq and bot_self_id and at_qq != bot_self_id:
+                    has_at_other = True
+                    logger.info(f"🚫 消息@了其他人（QQ: {at_qq}），不触发智能回复")
+                    break
+                elif at_qq and not bot_self_id:
+                    # 如果无法获取机器人QQ号，保守处理，不触发
+                    has_at_other = True
+                    logger.info(f"🚫 无法获取机器人QQ号，保守处理，不触发智能回复")
+                    break
+
+        # 如果@了其他人，直接返回
+        if has_at_other:
+            return
+        # ========== 检查@其他人结束 ==========
+
         # 获取群组的智能触发配置
         trigger_config = config.get_group_trigger_config(group_id)
-        
+
         # 检查是否启用智能触发
         if not trigger_config.enabled:
             return
-        
+
         # 检查是否需要强制@
         if trigger_config.require_mention:
             # 如果强制要求@，则不处理（已有 to_me 处理器处理@）
