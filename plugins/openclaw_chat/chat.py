@@ -101,7 +101,10 @@ async def handle_chat(bot: Bot, event: Event):
             group_id=group_id,
             model=config.ai_model,  # 使用配置的模型
             model_name=config.model_name if config.model_name else None,  # 使用配置的具体模型
-            api_key=config.current_api_key  # 使用配置的 API Key
+            api_key=config.current_api_key,  # 使用配置的 API Key
+            reply_mode=config.reply_mode,  # 使用配置的回复模式
+            max_length=config.reply_max_length,  # 使用配置的最大长度
+            concise_patterns=config.concise_mode_patterns  # 使用配置的简洁模式触发模式
         )
         
         # 发送回复
@@ -145,7 +148,10 @@ async def handle_chat_cmd(bot: Bot, event: Event, args: Message = CommandArg()):
             group_id=group_id,
             model=config.ai_model,
             model_name=config.model_name if config.model_name else None,
-            api_key=config.current_api_key
+            api_key=config.current_api_key,
+            reply_mode=config.reply_mode,
+            max_length=config.reply_max_length,
+            concise_patterns=config.concise_mode_patterns
         )
         
         # 发送回复
@@ -510,7 +516,9 @@ async def handle_intelligent_chat(bot: Bot, event: Event):
             model=config.ai_model,
             model_name=config.model_name if config.model_name else None,
             api_key=config.current_api_key,
-            history_limit=trigger_config.history_limit
+            reply_mode=config.reply_mode,
+            max_length=config.reply_max_length,
+            concise_patterns=config.concise_mode_patterns
         )
         
         # 发送回复

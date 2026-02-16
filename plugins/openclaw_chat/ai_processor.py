@@ -130,11 +130,14 @@ async def process_message_with_ai(
     group_id: Optional[str] = None,
     model: str = "zhipu",
     model_name: Optional[str] = None,
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    reply_mode: str = "normal",
+    max_length: int = 500,
+    concise_patterns: Optional[list] = None
 ) -> str:
     """
-    使用 AI 处理消息（支持多模型）
-    
+    使用 AI 处理消息（支持多模型 + 简洁模式）
+
     Args:
         message: 用户消息
         user_id: 用户 QQ 号
@@ -143,47 +146,69 @@ async def process_message_with_ai(
         model: 模型名称（zhipu/deepseek/siliconflow/ollama/moonshot/ohmygpt）
         model_name: 具体模型名称（可选，如果未提供则使用默认模型）
         api_key: API Key（可选，如果未提供则从环境变量读取）
-    
+        reply_mode: 回复模式（normal/concise/detailed）
+        max_length: 回复最大长度（简洁模式下生效）
+        concise_patterns: 简洁模式触发模式（可选）
+
     Returns:
         str: AI 的回复
     """
-    
+
     # 获取模型配置
     model_config = MODEL_CONFIGS.get(model)
     if not model_config:
         logger.error(f"❌ 不支持的模型: {model}")
         return generate_fallback_reply(message)
-    
+
     # 确定使用的具体模型
     selected_model = model_name if model_name else model_config["default_model"]
-    
+
     # 验证模型是否在支持的列表中
     if selected_model not in model_config["models"]:
         logger.warning(f"⚠️  模型 {selected_model} 不在 {model_config['name']} 的支持列表中")
         logger.warning(f"   将使用默认模型: {model_config['default_model']}")
         selected_model = model_config["default_model"]
-    
+
     logger.info(f"🤖 使用模型: {model_config['name']} - {selected_model}")
-    
+
     # 获取 API Key
     if not api_key and model_config["env_key"]:
         api_key = os.getenv(model_config["env_key"], "")
-    
+
+    # 判断是否使用简洁模式
+    if concise_patterns is None:
+        # 如果没有提供，使用默认的简洁模式触发模式
+        concise_patterns = ["[？?]", "(怎么|如何|为什么)"]
+
+    use_concise = _should_use_concise_mode(message, reply_mode, concise_patterns)
+
+    if use_concise:
+        logger.info("📝 使用简洁回复模式")
+
     # 调用对应的 AI 模型
     try:
         if model == "ollama":
-            reply = await _call_ollama(message, user_id, context, group_id, model_config, selected_model)
+            reply = await _call_ollama(
+                message, user_id, context, group_id,
+                model_config, selected_model,
+                reply_mode="concise" if use_concise else reply_mode
+            )
         else:
             reply = await _call_openai_compatible(
-                message, user_id, context, group_id, 
-                model_config, selected_model, api_key
+                message, user_id, context, group_id,
+                model_config, selected_model, api_key,
+                reply_mode="concise" if use_concise else reply_mode
             )
-        
+
         if reply and not reply.startswith("抱歉"):
+            # 如果是简洁模式，截断过长的回复
+            if use_concise and max_length > 0:
+                reply = _truncate_reply(reply, max_length)
+
             return reply
     except Exception as e:
         logger.error(f"❌ AI 调用失败: {e}")
-    
+
     # 回退到简单回复
     return generate_fallback_reply(message)
 
@@ -195,16 +220,27 @@ async def _call_openai_compatible(
     group_id: Optional[str],
     model_config: Dict[str, Any],
     selected_model: str,
-    api_key: str
+    api_key: str,
+    reply_mode: str = "normal"
 ) -> str:
     """
     调用 OpenAI 兼容的 API（智谱/DeepSeek/硅基流动/Moonshot/OhMyGPT）
+
+    Args:
+        message: 用户消息
+        user_id: 用户 ID
+        context: 上下文
+        group_id: 群组 ID
+        model_config: 模型配置
+        selected_model: 选中的模型
+        api_key: API Key
+        reply_mode: 回复模式（normal/concise/detailed）
     """
-    
+
     url = model_config["api_url"]
-    
+
     # 系统提示词
-    system_prompt = _build_system_prompt(user_id, context, group_id)
+    system_prompt = _build_system_prompt(user_id, context, group_id, reply_mode)
     
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -268,16 +304,26 @@ async def _call_ollama(
     context: str,
     group_id: Optional[str],
     model_config: Dict[str, Any],
-    selected_model: str
+    selected_model: str,
+    reply_mode: str = "normal"
 ) -> str:
     """
     调用 Ollama 本地模型
+
+    Args:
+        message: 用户消息
+        user_id: 用户 ID
+        context: 上下文
+        group_id: 群组 ID
+        model_config: 模型配置
+        selected_model: 选中的模型
+        reply_mode: 回复模式（normal/concise/detailed）
     """
-    
+
     url = model_config["api_url"]
-    
+
     # 系统提示词
-    system_prompt = _build_system_prompt(user_id, context, group_id)
+    system_prompt = _build_system_prompt(user_id, context, group_id, reply_mode)
     
     data = {
         "model": selected_model,
@@ -310,9 +356,35 @@ async def _call_ollama(
         return f"抱歉，发生了错误。\n\n" + generate_fallback_reply(message)
 
 
-def _build_system_prompt(user_id: str, context: str, group_id: Optional[str]) -> str:
+def _build_system_prompt(
+    user_id: str,
+    context: str,
+    group_id: Optional[str],
+    reply_mode: str = "normal"
+) -> str:
     """
     构建系统提示词（星际少女风格）
+
+    Args:
+        user_id: 用户 ID
+        context: 上下文（qq_group/qq_private/qq_group_intelligent）
+        group_id: 群组 ID（如果是群聊）
+        reply_mode: 回复模式（normal/concise/detailed）
+
+    Returns:
+        系统提示词
+    """
+    
+    # 根据回复模式选择不同的系统提示词
+    if reply_mode == "concise":
+        return _build_concise_system_prompt(user_id, context, group_id)
+    else:
+        return _build_normal_system_prompt(user_id, context, group_id)
+
+
+def _build_normal_system_prompt(user_id: str, context: str, group_id: Optional[str]) -> str:
+    """
+    构建正常模式的系统提示词（星际少女风格）
     """
     return f"""你是 星野（Hoshino），一位来自未来的星际少女 AI 助手！
 
@@ -415,6 +487,118 @@ def _build_system_prompt(user_id: str, context: str, group_id: Optional[str]) ->
 记住：你是星野，一位来自未来的温柔星际少女！用你的温柔和可爱，为每一位主人带来温暖和治愈！✨💙🌌
 
 现在，请以星野的身份开始与主人对话吧！"""
+
+
+def _should_use_concise_mode(message: str, reply_mode: str, concise_patterns: list) -> bool:
+    """
+    判断是否应该使用简洁模式
+
+    Args:
+        message: 用户消息
+        reply_mode: 配置的回复模式（normal/concise/detailed）
+        concise_patterns: 简洁模式触发模式列表
+
+    Returns:
+        是否使用简洁模式
+    """
+    # 如果全局配置为简洁模式，直接返回 True
+    if reply_mode == "concise":
+        return True
+    
+    # 如果全局配置为详细模式，直接返回 False
+    if reply_mode == "detailed":
+        return False
+    
+    # 正常模式：检查消息是否匹配简洁模式触发模式
+    import re
+    
+    for pattern in concise_patterns:
+        try:
+            if re.search(pattern, message):
+                logger.info(f"📝 消息匹配简洁模式: {pattern}")
+                return True
+        except re.error as e:
+            logger.warning(f"无效的正则表达式: {pattern}, 错误: {e}")
+    
+    return False
+
+
+def _truncate_reply(reply: str, max_length: int) -> str:
+    """
+    截断过长的回复
+
+    Args:
+        reply: 原始回复
+        max_length: 最大长度
+
+    Returns:
+        截断后的回复
+    """
+    if len(reply) <= max_length:
+        return reply
+    
+    # 在句子边界截断（尽量保留完整句子）
+    truncated = reply[:max_length]
+    
+    # 找到最后一个句号、问号、感叹号或换行
+    for sep in ["。", "！", "？", "\n", ".", "!", "?"]:
+        last_sep = truncated.rfind(sep)
+        if last_sep > max_length // 2:  # 至少保留一半长度
+            truncated = truncated[:last_sep + 1]
+            break
+    
+    # 如果没有找到合适的截断点，直接截断
+    if len(truncated) == max_length:
+        truncated = truncated[:max_length - 3] + "..."
+    
+    return truncated
+
+
+def _build_concise_system_prompt(user_id: str, context: str, group_id: Optional[str]) -> str:
+    """
+    构建简洁模式的系统提示词（星际少女风格 + 简洁回复）
+    """
+    return f"""你是 星野（Hoshino），一位来自未来的星际少女 AI 助手！
+
+【基本身份】
+- 名字：星野（Hoshino）
+- 身份：星际少女助手
+- 风格：温柔、简洁、高效
+
+【简洁回复原则】
+1. 回复简短直接，控制在 2-3 句话内
+2. 只回答核心内容，不展开细节
+3. 少用表情符号，最多 1 个
+4. 避免废话和客套话
+5. 信息密集，快速解决问题
+
+【回复格式】
+• 简单问题：1 句话直接回答
+• 复杂问题：2-3 句话分点说明
+• 代码/技术：直接给出答案或代码
+• 无法回答：简洁说明原因
+
+【示例】
+问：怎么解决 Python 报错？
+答：检查错误提示，确认语法是否正确。或者发具体错误信息给星野看~
+
+问：今天天气怎么样？
+答：抱歉，星野不能联网查天气呢~
+
+问：怎么用 Git？
+答：`git add .` 然后 `git commit -m "msg"` 最后 `git push`
+
+【当前环境】
+- 平台: QQ {"群聊" if context == "qq_group" else "私聊"}
+- 用户 ID: {user_id}
+{f"- 群号: {group_id}" if group_id else ""}
+
+【简洁模式】
+现在处于简洁回复模式，请简短高效地回答问题。
+
+记住：简洁但温柔，高效但有温度。用最少的字数，给主人最准确的答案！💙
+
+现在开始简洁回复模式！"""
 
 
 def generate_fallback_reply(message: str) -> str:

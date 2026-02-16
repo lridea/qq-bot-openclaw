@@ -90,6 +90,11 @@ class Config(BaseModel):
     # 群组配置文件路径
     group_config_file: str = os.getenv("GROUP_CONFIG_FILE", "group_configs.json")
     
+    # ========== 简洁模式配置 ==========
+    reply_mode: str = os.getenv("REPLY_MODE", "normal")  # normal/concise/detailed
+    reply_max_length: int = int(os.getenv("REPLY_MAX_LENGTH", "500"))  # 回复最大字符数
+    concise_mode_patterns: List[str] = eval(os.getenv("CONCISE_MODE_PATTERNS", '["[？?]", "(怎么|如何|为什么)"]'))  # 简洁模式触发模式
+    
     # 群组配置（运行时加载）
     _group_configs: Dict[str, GroupConfig] = {}
     
