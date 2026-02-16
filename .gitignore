@@ -11,6 +11,7 @@ ENV/
 dist/
 build/
 runtime/
+data/
 
 # 环境配置（不提交敏感信息）
 .env

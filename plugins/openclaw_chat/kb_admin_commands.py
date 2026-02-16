@@ -8,8 +8,10 @@
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, GroupMessageEvent, PrivateMessageEvent
 from nonebot.params import CommandArg
-from nonebot.rule import to_me, is_superuser
+from nonebot.rule import to_me
+from nonebot.permission import SUPERUSER
 from nonebot.log import logger
+from nonebot.exception import FinishedException
 
 # 导入配置
 from config import config
@@ -47,10 +49,7 @@ def _init_kb_if_needed():
 
             _kb_manager = KnowledgeBaseManager(kb_dir=config.knowledge_base_dir)
             _vdb_manager = VectorDatabaseManager(kb_dir=config.knowledge_base_dir)
-            _builder = KnowledgeBaseBuilder(
-                kb_manager=_kb_manager,
-                vdb_manager=_vdb_manager
-            )
+            _builder = KnowledgeBaseBuilder(kb_dir=config.knowledge_base_dir)
 
             logger.info("✅ 知识库管理器初始化成功")
         except Exception as e:
@@ -104,6 +103,8 @@ async def handle_kb_list():
 
         await kb_list.finish("\n".join(reply_lines))
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 查看知识库列表失败: {e}")
         await kb_list.finish(f"❌ 查看知识库列表失败: {e}")
@@ -139,20 +140,20 @@ async def handle_kb_status(args: Message = CommandArg()):
         if not kb_manager.exists(kb_id):
             await kb_status.finish(f"⚠️  知识库不存在: {kb_id}")
 
-        # 获取知识库状态
-        status_data = kb_manager.get_status(kb_id)
+        # 获取知识库信息
+        kb_info = kb_manager.get_knowledge_base(kb_id)
 
         # 构建回复
         reply_lines = [
-            f"📊 知识库状态: **{status_data['kb_name']}**\n",
-            f"• ID: {status_data['kb_id']}",
-            f"• 状态: {'✅ 已就绪' if status_data['status'] == 'ready' else '⏳ 构建中'}",
-            f"• 创建时间: {status_data['created_at']}",
-            f"• 最后更新: {status_data['updated_at']}",
+            f"📊 知识库状态: **{kb_info.kb_name}**\n",
+            f"• ID: {kb_info.kb_id}",
+            f"• 状态: {'✅ 已就绪' if kb_info.status == 'ready' else '⏳ 构建中'}",
+            f"• 创建时间: {kb_info.created_at}",
+            f"• 最后更新: {kb_info.updated_at}",
         ]
 
         # 如果已就绪，添加统计信息
-        if status_data["status"] == "ready" and vdb_manager:
+        if kb_info.status == "ready" and vdb_manager:
             try:
                 collection = vdb_manager.get_collection(kb_id)
                 if collection:
@@ -163,6 +164,8 @@ async def handle_kb_status(args: Message = CommandArg()):
 
         await kb_status.finish("\n".join(reply_lines))
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 查看知识库状态失败: {e}")
         await kb_status.finish(f"❌ 查看知识库状态失败: {e}")
@@ -175,7 +178,8 @@ kb_build = on_command(
     aliases={"构建知识库", "kb构建"},
     priority=5,
     block=True,
-    rule=is_superuser
+    rule=to_me(),
+    permission=SUPERUSER
 )
 
 
@@ -218,6 +222,8 @@ async def handle_kb_build(args: Message = CommandArg()):
 
         await kb_build.send(f"✅ 知识库构建完成: {kb_id}\n\n💡 使用 /kb_status {kb_id} 查看状态")
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 构建知识库失败: {e}")
         await kb_build.finish(f"❌ 构建知识库失败: {e}")
@@ -230,7 +236,8 @@ kb_update = on_command(
     aliases={"更新知识库", "kb更新"},
     priority=5,
     block=True,
-    rule=is_superuser
+    rule=to_me(),
+    permission=SUPERUSER
 )
 
 
@@ -262,6 +269,8 @@ async def handle_kb_update(args: Message = CommandArg()):
 
         await kb_update.send(f"✅ 知识库更新完成: {kb_id}\n\n💡 使用 /kb_status {kb_id} 查看状态")
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 更新知识库失败: {e}")
         await kb_update.finish(f"❌ 更新知识库失败: {e}")
@@ -274,7 +283,8 @@ kb_delete = on_command(
     aliases={"删除知识库", "kb删除"},
     priority=5,
     block=True,
-    rule=is_superuser
+    rule=to_me(),
+    permission=SUPERUSER
 )
 
 
@@ -303,6 +313,8 @@ async def handle_kb_delete(args: Message = CommandArg()):
 
         await kb_delete.finish(f"✅ 知识库已删除: {kb_id}")
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 删除知识库失败: {e}")
         await kb_delete.finish(f"❌ 删除知识库失败: {e}")
@@ -315,7 +327,8 @@ kb_group_set = on_command(
     aliases={"设置群知识库", "kb群设置"},
     priority=5,
     block=True,
-    rule=is_superuser
+    rule=to_me(),
+    permission=SUPERUSER
 )
 
 
@@ -368,6 +381,8 @@ async def handle_kb_group_set(args: Message = CommandArg(), event: GroupMessageE
             f"• 检索数量: {top_k}"
         )
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 设置群知识库失败: {e}")
         await kb_group_set.finish(f"❌ 设置群知识库失败: {e}")
@@ -429,6 +444,8 @@ async def handle_kb_group_status(event: GroupMessageEvent = None):
 
         await kb_group_status.finish("\n".join(reply_lines))
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 查看群知识库状态失败: {e}")
         await kb_group_status.finish(f"❌ 查看群知识库状态失败: {e}")
@@ -496,6 +513,8 @@ async def handle_kb_test(args: Message = CommandArg(), event: GroupMessageEvent 
 
         await kb_test.finish("\n".join(reply_lines))
 
+    except FinishedException:
+        raise
     except Exception as e:
         logger.error(f"❌ 测试知识库检索失败: {e}")
         await kb_test.finish(f"❌ 测试知识库检索失败: {e}")
