@@ -62,6 +62,16 @@ MODEL_CONFIGS = {
         "free_tier": True,
         "free_quota": "免费试用额度",
         "description": "Moonshot Kimi 长文本模型"
+    },
+    "ohmygpt": {
+        "name": "OhMyGPT",
+        "api_url": "https://api.ohmygpt.com/v1/chat/completions",
+        "models": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini"],
+        "default_model": "gpt-4o-mini",
+        "env_key": "OHMYGPT_API_KEY",
+        "free_tier": True,
+        "free_quota": "按使用计费",
+        "description": "OhMyGPT 中转服务，支持 GPT 系列模型"
     }
 }
 
@@ -82,7 +92,7 @@ async def process_message_with_ai(
         user_id: 用户 QQ 号
         context: 上下文类型
         group_id: 群号（如果是群聊）
-        model: 模型名称（zhipu/deepseek/siliconflow/ollama/moonshot）
+        model: 模型名称（zhipu/deepseek/siliconflow/ollama/moonshot/ohmygpt）
         api_key: API Key（可选，如果未提供则从环境变量读取）
     
     Returns:
@@ -382,7 +392,7 @@ def list_available_models() -> str:
     """
     列出所有可用的模型
     """
-    result = "🦞 OpenClaw 支持的 AI 模型：\n\n"
+    result = "✨ 星野支持的 AI 模型：\n\n"
     
     for model_id, config in MODEL_CONFIGS.items():
         free_badge = "✅ 免费" if config["free_tier"] else "💰 付费"

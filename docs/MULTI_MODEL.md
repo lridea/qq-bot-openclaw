@@ -12,6 +12,7 @@ OpenClaw QQ Bot 支持多种 AI 模型，包括免费和付费选项。
 | **DeepSeek** | ✅ 有 | ⭐⭐⭐⭐⭐ | 强烈推荐，有免费额度 |
 | **硅基流动 (siliconflow)** | ✅ 完全免费 | ⭐⭐⭐⭐⭐ | 强烈推荐，完全免费 |
 | **Moonshot (Kimi)** | ✅ 有 | ⭐⭐⭐⭐ | 长文本能力强，有免费额度 |
+| **OhMyGPT** | ⚠️ 按量计费 | ⭐⭐⭐⭐ | GPT 系列模型中转服务 |
 | **Ollama 本地** | ✅ 完全免费 | ⭐⭐⭐⭐⭐ | 本地运行，完全免费，无需网络 |
 
 ---
@@ -119,7 +120,36 @@ MOONSHOT_API_KEY=your_moonshot_api_key_here
 
 ---
 
-### 5. 智谱 AI（需要充值）⭐⭐⭐
+### 5. OhMyGPT（GPT 中转服务）⭐⭐⭐⭐
+
+**获取 API Key：**
+1. 访问：https://www.ohmygpt.com/
+2. 注册账号
+3. 进入"API Keys"页面
+4. 创建新的 API Key
+
+**配置 .env：**
+```ini
+AI_MODEL=ohmygpt
+OHMYGPT_API_KEY=your_ohmygpt_api_key_here
+```
+
+**特点：**
+- ✅ 支持 GPT-3.5、GPT-4、GPT-4-turbo、GPT-4o 等模型
+- ✅ 中转服务，访问稳定
+- ⚠️ 按使用量计费
+- ✅ 适合需要 GPT 系列模型的场景
+
+**支持模型：**
+- `gpt-4o-mini` - 推荐使用，性价比高
+- `gpt-3.5-turbo` - 速度快，价格便宜
+- `gpt-4` - 性能最强
+- `gpt-4-turbo` - GPT-4 增强版
+- `gpt-4o` - OpenAI 最新模型
+
+---
+
+### 6. 智谱 AI（需要充值）⭐⭐⭐
 
 **获取 API Key：**
 1. 访问：https://open.bigmodel.cn/
@@ -175,6 +205,7 @@ SUPERUSERS=["123456789"]
 | DeepSeek | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | Ollama 本地 | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
 | Moonshot | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| OhMyGPT | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
 | 智谱 AI | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
 
 ### 成本对比
@@ -185,6 +216,7 @@ SUPERUSERS=["123456789"]
 | DeepSeek | ✅ 每月免费 | 很便宜 | ¥0-10 |
 | Ollama 本地 | ✅ 完全免费 | - | ¥0 |
 | Moonshot | ✅ 免费试用 | 中等 | ¥0-20 |
+| OhMyGPT | ❌ 无 | 按量计费 | ¥10-100+ |
 | 智谱 AI | ❌ 无 | 中等 | ¥10-50 |
 
 ---
@@ -298,7 +330,8 @@ ZHIPU_API_KEY=xxx
 2. **DeepSeek** - 有免费额度，性能优秀
 3. **Ollama 本地** - 完全免费，无需网络
 4. **Moonshot** - 长文本能力强
-5. **智谱 AI** - 性能最好，但需要充值
+5. **OhMyGPT** - 支持 GPT 系列，性能强但需付费
+6. **智谱 AI** - 性能最好，但需要充值
 
 ---
 
@@ -311,4 +344,4 @@ ZHIPU_API_KEY=xxx
 
 ---
 
-**选择适合你的模型，开始使用吧！** 🦞
+**选择适合你的模型，开始使用吧！** ✨💙
