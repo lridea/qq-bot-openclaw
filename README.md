@@ -13,6 +13,12 @@
 - ✅ **群组定制配置**：不同群聊可设置不同的触发规则
 - ✅ **超级管理员控制**：灵活管理智能触发功能
 - ✅ **简洁回复模式**：让机器人回复更简短高效，避免冗余
+- ✅ **对话记忆功能**：机器人能记住之前的对话，提供更连贯的回复
+- ✅ **Vision AI 图片识别**：支持识别图片内容，回答图片相关问题
+- ✅ **星野人设**：温柔乖巧的星际少女风格，生动有趣的对话体验
+- ✅ **知识库功能**：支持游戏知识库（泰拉瑞亚），智能检索相关内容
+- ✅ **多模型支持**：支持智谱 AI、DeepSeek、硅基流动、Ollama、Moonshot、OhMyGPT 等
+- ✅ **管理员命令**：丰富的管理员命令，方便管理和配置
 
 ## 📋 系统要求
 
@@ -325,6 +331,80 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 检查是否在群里 @机器人，或者私聊机器人。
 
 ## 📝 更新日志
+
+### v1.20.0 (2026-02-16) 🎉 知识库功能全部完成
+- ✨ 实现完整的知识库功能（7 个步骤全部完成）
+- 📚 创建知识库管理模块（knowledge_base_manager.py）
+- 🔍 集成 Chroma 向量数据库（vector_database_manager.py）
+- 📖 实现泰拉瑞亚 Wiki 解析器（wiki_parser.py）
+- 🏗️ 创建知识库构建器（knowledge_base_builder.py）
+- 🔎 实现知识库检索管理器（knowledge_base_retriever.py）
+- 🤖 集成知识库到 AI 流程（ai_processor.py）
+- 👥 实现群组知识库配置（config.py）
+- 🎛️ 实现 9 个管理员命令（kb_admin_commands.py）
+  - `/kb_list` - 查看所有知识库
+  - `/kb_status <知识库ID>` - 查看知识库状态
+  - `/kb_build <知识库ID> [名称]` - 构建知识库（超级管理员）
+  - `/kb_update <知识库ID>` - 更新知识库（超级管理员）
+  - `/kb_delete <知识库ID>` - 删除知识库（超级管理员）
+  - `/kb_group_set <群号> <知识库ID> [top_k]` - 设置群知识库（超级管理员）
+  - `/kb_group_status` - 查看群知识库状态
+  - `/kb_test <查询文本>` - 测试知识库检索
+  - `/kb_help` - 查看知识库命令帮助
+- 🎯 实现检索优化（缓存管理、结果过滤、排序、去重、相关性计算）
+- 🧠 实现 LRU/TTL 缓存机制，提升检索性能
+- 📊 支持不同群使用不同知识库
+- ✨ AI 回复时自动应用知识库上下文，保持星野人设
+- 📝 创建 7 个步骤文档（STEP1-STEP7）
+- 🧪 创建 5 个测试文件
+- 🌟 支持泰拉瑞亚游戏知识库（可扩展到其他领域）
+- 💡 支持灵活配置（启用/禁用、默认知识库、检索数量等）
+- 🚀 完整的功能文档和使用说明
+
+### v1.18.0 (2026-02-16) 🔍 步骤4 & 5 - 检索功能 + AI 流程集成
+- 🔍 实现知识库检索管理器（knowledge_base_retriever.py）
+- 🧠 实现 LRU/TTL 缓存机制，提升检索性能
+- 🎯 实现检索优化（结果过滤、排序、去重、相关性计算）
+- 📊 实现缓存统计功能（命中率、缓存大小等）
+- 🤖 集成知识库检索到 AI 流程（ai_processor.py）
+- 📝 修改 config.py，添加知识库配置
+- 🔧 扩展 GroupConfig，添加 kb_config
+- 🎨 实现知识库上下文传递给 AI，保持星野人设
+- 📚 创建步骤4和步骤5文档（STEP4_RETRIEVER.md、STEP5_AI_INTEGRATION.md）
+- 🧪 创建检索测试文件（test_retriever_standalone.py）
+
+### v1.17.1 (2026-02-16) 🐛 修复 knowledge_base_builder.py 导入问题
+- 🐛 修复 knowledge_base_builder.py 中导入 wiki_parser 的问题
+- 🔧 修正导入语句，确保模块可以正常导入
+- ✅ 代码语法检查通过
+
+### v1.17.0 (2026-02-16) 📖 步骤3 - 泰拉瑞亚 Wiki 解析器
+- 📖 创建泰拉瑞亚 Wiki 解析器（wiki_parser.py）
+- 🔍 实现页面内容解析（提取标题、内容、链接）
+- 📄 实现内容分块功能（按字符数分块）
+- 🔗 实现页面链接提取和去重
+- 🏗️ 创建知识库构建器（knowledge_base_builder.py）
+- 🔄 实现知识库构建和更新流程
+- 📊 实现构建进度跟踪和日志输出
+- 📚 创建步骤3文档（STEP3_WIKI_PARSER.md）
+- 🧪 创建 Wiki 解析器测试文件（test_wiki_parser_standalone.py）
+
+### v1.16.0 (2026-02-16) 💾 步骤2 - Chroma 向量数据库
+- 💾 集成 Chroma 向量数据库（vector_database_manager.py）
+- 🔧 实现向量存储和检索功能
+- 📝 实现批量添加和删除文档
+- 🎯 实现相似度搜索（top_k）
+- 🏷️ 实现元数据过滤功能
+- 📚 创建步骤2文档（STEP2_VECTOR_DATABASE_MANAGER.md）
+- 🧪 创建向量数据库测试文件（test_vector_db_manager_standalone.py）
+
+### v1.15.0 (2026-02-16) 📚 步骤1 - 知识库管理模块
+- 📚 创建知识库管理模块（knowledge_base_manager.py）
+- ➕ 实现知识库创建、删除、列表功能
+- 🔍 实现知识库状态检查（exists、is_ready、get_status）
+- 📁 实现知识库元数据管理（创建时间、更新时间等）
+- 📚 创建步骤1文档（STEP1_KNOWLEDGE_BASE_MANAGER.md）
+- 🧪 创建知识库管理器测试文件（test_kb_manager_standalone.py）
 
 ### v1.13.0 (2026-02-16) 🎨 Vision AI 应用人设
 - 🎭 修改 Vision AI 调用，支持系统提示词（system_prompt）
