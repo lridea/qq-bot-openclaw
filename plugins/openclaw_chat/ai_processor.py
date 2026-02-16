@@ -16,8 +16,8 @@ from nonebot.log import logger
 MODEL_CONFIGS = {
     "zhipu": {
         "name": "智谱 AI",
-        "api_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        "models": ["glm-4", "glm-4-flash", "glm-4-plus"],
+        "api_url": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+        "models": ["glm-4", "glm-4-flash", "glm-4-plus", "glm-4.7-flashx"],
         "default_model": "glm-4-flash",
         "env_key": "ZHIPU_API_KEY",
         "free_tier": False,
@@ -40,6 +40,7 @@ MODEL_CONFIGS = {
             # DeepSeek 系列（高强度推理）
             "deepseek-v3.2", "deepseek-v3.1-terminus", "deepseek-r1",
             # Qwen 系列（全尺寸、全模态）
+            "Qwen/Qwen3-8B",
             "Qwen/Qwen3-72B-Instruct", "Qwen/Qwen3-14B-Instruct",
             "Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-72B-Instruct",
             "Qwen/Qwen2.5-14B-Instruct", "Qwen/Qwen2.5-32B-Instruct",
@@ -85,12 +86,12 @@ MODEL_CONFIGS = {
     },
     "ohmygpt": {
         "name": "OhMyGPT",
-        "api_url": "https://api.ohmygpt.com/v1/chat/completions",
+        "api_url": "https://apic1.ohmycdn.com/v1/chat/completions",
         "models": [
             # GLM 系列
             "glm-4", "glm-4-flash", "glm-4-plus", "glm-4.7", "glm-4.5", "glm-4.5-air", "glm-4.5-x",
             # Kimi 系列
-            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k", "kimi-k2", "kimi-k2-0905",
+            "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k", "kimi-k2", "kimi-k2-0905", "fireworks/models/kimi-k2-instruct-0905",
             # GPT 系列
             "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
             "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5-pro",
@@ -230,9 +231,17 @@ async def _call_openai_compatible(
                 logger.info(f"✅ {model_config['name']} 回复成功: {reply[:50]}...")
                 return reply
             else:
-                error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
-                error_code = error_data.get("error", {}).get("code", "unknown")
-                error_msg = error_data.get("error", {}).get("message", response.text)
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict):
+                        error_code = error_data.get("error", {}).get("code", "unknown") if isinstance(error_data.get("error"), dict) else "unknown"
+                        error_msg = error_data.get("error", {}).get("message", response.text) if isinstance(error_data.get("error"), dict) else str(error_data)
+                    else:
+                        error_code = "unknown"
+                        error_msg = str(error_data)
+                except Exception:
+                    error_code = "unknown"
+                    error_msg = response.text
                 
                 logger.error(f"❌ {model_config['name']} API 错误: {response.status_code} - {error_msg}")
                 
