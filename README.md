@@ -179,6 +179,12 @@ admin_cmd = on_command("admin", permission=SUPERUSER)
 
 ## 📝 更新日志
 
+### v1.3.0 (2026-02-16)
+- ✨ 扩展 OhMyGPT 支持 GPT/Claude/Kimi/GLM/Gemini/Llama 等多系列模型
+- ⚙️ 添加 MODEL_NAME 配置项，支持指定具体模型
+- 📚 完善多模型配置文档，添加 MODEL_NAME 详细说明
+- 🔧 更新所有 AI 调用函数，支持用户指定模型
+
 ### v1.2.0 (2026-02-16)
 - ✨ 添加 OhMyGPT 模型支持（支持 GPT-3.5、GPT-4、GPT-4o 等模型）
 - 💫 更新机器人人设为"星野（Hoshino）"星际少女风格
