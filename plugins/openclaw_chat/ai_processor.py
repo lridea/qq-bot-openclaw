@@ -141,7 +141,7 @@ async def process_message_with_ai(
     concise_patterns: Optional[list] = None
 ) -> str:
     """
-    使用 AI 处理消息（支持多模型 + 简洁模式）
+    使用 AI 处理消息（支持多模型 + 简洁模式 + 群组配置）
 
     Args:
         message: 用户消息
@@ -151,13 +151,24 @@ async def process_message_with_ai(
         model: 模型名称（zhipu/deepseek/siliconflow/ollama/moonshot/ohmygpt）
         model_name: 具体模型名称（可选，如果未提供则使用默认模型）
         api_key: API Key（可选，如果未提供则从环境变量读取）
-        reply_mode: 回复模式（normal/concise/detailed）
+        reply_mode: 回复模式（normal/concise/detailed，群聊时会被群组配置覆盖）
         max_length: 回复最大长度（简洁模式下生效）
         concise_patterns: 简洁模式触发模式（可选）
 
     Returns:
         str: AI 的回复
     """
+
+    # 导入配置（动态导入，避免循环依赖）
+    from config import config
+
+    # ========== 群组简洁模式配置 ==========
+    # 如果是群聊，优先使用群组的简洁模式配置
+    if context == "qq_group" or context == "qq_group_intelligent":
+        group_reply_mode = config.get_group_reply_mode(group_id)
+        if group_reply_mode != reply_mode:
+            logger.info(f"📝 群组简洁模式配置覆盖: {reply_mode} -> {group_reply_mode}")
+            reply_mode = group_reply_mode
 
     # 获取模型配置
     model_config = MODEL_CONFIGS.get(model)
@@ -183,9 +194,6 @@ async def process_message_with_ai(
     # ========== 对话记忆功能 ==========
     conversation_history = []
     session_id = f"user_{user_id}" if not group_id else f"group_{group_id}"
-
-    # 导入配置（动态导入，避免循环依赖）
-    from config import config
 
     if config.memory_enabled:
         try:

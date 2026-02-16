@@ -27,9 +27,15 @@ class IntelligentTriggerConfig(BaseModel):
     history_limit: int = 20  # 查看最近多少条消息作为上下文
 
 
+class ReplyModeConfig(BaseModel):
+    """简洁模式配置"""
+    reply_mode: Optional[str] = None  # normal/concise/detailed（None 表示使用全局默认）
+
+
 class GroupConfig(BaseModel):
     """群组配置"""
     trigger_config: Optional[IntelligentTriggerConfig] = None  # 该群的智能触发配置（覆盖默认）
+    reply_mode_config: Optional[ReplyModeConfig] = None  # 该群的简洁模式配置（覆盖默认）
 
 
 class Config(BaseModel):
@@ -144,7 +150,7 @@ class Config(BaseModel):
         """获取群组的智能触发配置（如果未配置则使用默认配置）"""
         if group_id in self._group_configs and self._group_configs[group_id].trigger_config:
             return self._group_configs[group_id].trigger_config
-        
+
         # 返回默认配置
         return IntelligentTriggerConfig(
             enabled=self.intelligent_trigger_enabled,
@@ -152,14 +158,39 @@ class Config(BaseModel):
             mention_patterns=self.intelligent_trigger_patterns,
             history_limit=self.intelligent_trigger_history_limit
         )
-    
+
     def set_group_trigger_config(self, group_id: str, trigger_config: IntelligentTriggerConfig):
         """设置群组的智能触发配置"""
         if group_id not in self._group_configs:
             self._group_configs[group_id] = GroupConfig()
         self._group_configs[group_id].trigger_config = trigger_config
         self.save_group_configs()
-    
+
+    def get_group_reply_mode(self, group_id: str) -> str:
+        """获取群组的简洁模式（如果未配置则使用全局默认）"""
+        if group_id in self._group_configs and self._group_configs[group_id].reply_mode_config:
+            group_reply_mode = self._group_configs[group_id].reply_mode_config.reply_mode
+            if group_reply_mode and group_reply_mode in ["normal", "concise", "detailed"]:
+                return group_reply_mode
+
+        # 返回全局默认配置
+        return self.reply_mode
+
+    def set_group_reply_mode(self, group_id: str, reply_mode: str):
+        """设置群组的简洁模式"""
+        if group_id not in self._group_configs:
+            self._group_configs[group_id] = GroupConfig()
+        if not self._group_configs[group_id].reply_mode_config:
+            self._group_configs[group_id].reply_mode_config = ReplyModeConfig()
+        self._group_configs[group_id].reply_mode_config.reply_mode = reply_mode
+        self.save_group_configs()
+
+    def remove_group_reply_mode(self, group_id: str):
+        """移除群组的简洁模式配置（恢复全局默认）"""
+        if group_id in self._group_configs and self._group_configs[group_id].reply_mode_config:
+            self._group_configs[group_id].reply_mode_config.reply_mode = None
+            self.save_group_configs()
+
     def remove_group_config(self, group_id: str):
         """移除群组配置（恢复默认）"""
         if group_id in self._group_configs:

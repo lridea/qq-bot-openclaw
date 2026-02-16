@@ -454,6 +454,15 @@ async def handle_admin_help():
   • /vision_set ohmygpt gpt-4o - 设置为 OhMyGPT GPT-4o
   • /vision_set siliconflow Qwen/Qwen2-VL-7B-Instruct - 设置为硅基流动 Qwen2-VL
 
+【简洁模式管理】
+• /reply_mode_status 或 /简洁状态 - 查看简洁模式配置
+• /reply_mode_set 或 /简洁设置 <群号> <模式> - 设置群简洁模式
+  • /reply_mode_set 123456789 normal - 设置为正常模式
+  • /reply_mode_set 123456789 concise - 设置为简洁模式
+  • /reply_mode_set 123456789 detailed - 设置为详细模式
+• /reply_mode_reset 或 /简洁重置 <群号> - 重置群为全局默认
+• /reply_mode_list 或 /简洁列表 - 查看所有群配置
+
 【智能触发管理】
 • /trigger_status 或 /触发状态 - 查看智能触发配置
 • /trigger_enable 或 /触发启用 <群号> - 启用群智能触发
@@ -938,8 +947,183 @@ async def handle_trigger_list():
             text += f"• 模式：{', '.join(trigger_config.mention_patterns[:2])}...\n\n"
     
     text += f"\n💡 提示：使用 /trigger_reset <群号> 恢复默认配置"
-    
+
     await trigger_list_cmd.send(text)
 
+
+# ========== 简洁模式管理命令 ==========
+
+# 简洁模式状态命令
+reply_mode_status_cmd = on_command("reply_mode_status", aliases={"简洁状态", "简洁模式状态", "回复模式状态"}, priority=1, permission=SUPERUSER)
+
+
+@reply_mode_status_cmd.handle()
+async def handle_reply_mode_status(event: Event):
+    """显示简洁模式状态（仅超级管理员）"""
+    group_id = str(event.group_id) if event.group_id else None
+
+    text = f"""📝 简洁模式配置 💙
+
+【全局默认配置】
+• 回复模式：{config.reply_mode}
+  • normal - 正常模式（根据内容判断）
+  • concise - 简洁模式（所有回复简短）
+  • detailed - 详细模式（全面解答）
+• 最大长度：{config.reply_max_length} 字符
+"""
+
+    if group_id:
+        group_reply_mode = config.get_group_reply_mode(group_id)
+        if group_reply_mode != config.reply_mode:
+            text += f"\n【当前群配置】\n• 群号：{group_id}\n• 回复模式：{group_reply_mode}\n⚠️ 已覆盖全局默认配置"
+        else:
+            text += f"\n【当前群配置】\n• 群号：{group_id}\n• 使用全局默认配置"
+
+    text += f"""
+
+【触发模式】
+• {chr(10).join([f'• {p}' for p in config.concise_mode_patterns])}
+
+【说明】
+• normal 模式下，以下情况自动使用简洁回复：
+  - 包含问号（？或?）
+  - 包含疑问词：怎么、如何、为什么
+  - 匹配其他触发模式
+
+💡 使用 /reply_mode_set <群号> <模式> 设置群简洁模式
+💡 使用 /reply_mode_reset <群号> 恢复全局默认
+"""
+
+    await reply_mode_status_cmd.send(text)
+
+
+# 简洁模式设置命令
+reply_mode_set_cmd = on_command("reply_mode_set", aliases={"简洁设置", "简洁模式设置", "回复模式设置"}, priority=1, permission=SUPERUSER)
+
+
+@reply_mode_set_cmd.handle()
+async def handle_reply_mode_set(event: Event):
+    """设置群组的简洁模式（仅超级管理员）"""
+    args = event.get_plaintext().strip().split()
+
+    if len(args) < 3:
+        await reply_mode_set_cmd.send(
+            "❌ 参数错误！\n\n"
+            "用法：/reply_mode_set <群号> <模式>\n\n"
+            "模式：\n"
+            "• normal - 正常模式（根据内容判断）\n"
+            "• concise - 简洁模式（所有回复简短）\n"
+            "• detailed - 详细模式（全面解答）\n\n"
+            "示例：\n"
+            "• /reply_mode_set 123456789 normal\n"
+            "• /reply_mode_set 123456789 concise\n"
+            "• /reply_mode_set 123456789 detailed"
+        )
+        return
+
+    group_id = args[1]
+    reply_mode = args[2].lower()
+
+    # 验证模式
+    valid_modes = ["normal", "concise", "detailed"]
+    if reply_mode not in valid_modes:
+        await reply_mode_set_cmd.send(
+            f"❌ 不支持的回复模式：{reply_mode}\n\n"
+            f"支持的模式：{', '.join(valid_modes)}"
+        )
+        return
+
+    # 设置群组配置
+    config.set_group_reply_mode(group_id, reply_mode)
+
+    mode_desc = {
+        "normal": "正常模式（根据内容判断）",
+        "concise": "简洁模式（所有回复简短）",
+        "detailed": "详细模式（全面解答）"
+    }
+
+    await reply_mode_set_cmd.send(
+        f"✅ 已设置群 {group_id} 为 {mode_desc[reply_mode]} ✨💙\n\n"
+        f"• 群号：{group_id}\n"
+        f"• 回复模式：{reply_mode} - {mode_desc[reply_mode]}\n\n"
+        f"✨ 已生效，群内回复将使用新设置"
+    )
+
+
+# 简洁模式重置命令
+reply_mode_reset_cmd = on_command("reply_mode_reset", aliases={"简洁重置", "简洁模式重置", "回复模式重置"}, priority=1, permission=SUPERUSER)
+
+
+@reply_mode_reset_cmd.handle()
+async def handle_reply_mode_reset(event: Event):
+    """重置群组的简洁模式为全局默认（仅超级管理员）"""
+    args = event.get_plaintext().strip().split()
+
+    if len(args) < 2:
+        await reply_mode_reset_cmd.send(
+            "❌ 参数错误！\n\n"
+            "用法：/reply_mode_reset <群号>\n\n"
+            "示例：/reply_mode_reset 123456789"
+        )
+        return
+
+    group_id = args[1]
+
+    # 移除群组配置
+    config.remove_group_reply_mode(group_id)
+
+    await reply_mode_reset_cmd.send(
+        f"✅ 已重置群 {group_id} 为全局默认配置 ✨💙\n\n"
+        f"• 群号：{group_id}\n"
+        f"• 回复模式：{config.reply_mode}\n\n"
+        f"✨ 已生效，群内回复将使用全局默认设置"
+    )
+
+
+# 简洁模式列表命令
+reply_mode_list_cmd = on_command("reply_mode_list", aliases={"简洁列表", "简洁模式列表", "回复模式列表"}, priority=1, permission=SUPERUSER)
+
+
+@reply_mode_list_cmd.handle()
+async def handle_reply_mode_list():
+    """显示所有群的简洁模式配置（仅超级管理员）"""
+    from config import config
+
+    # 加载群组配置
+    config.load_group_configs()
+
+    # 筛选有自定义简洁模式的群
+    custom_groups = []
+    for group_id, group_config in config._group_configs.items():
+        if group_config.reply_mode_config and group_config.reply_mode_config.reply_mode:
+            custom_groups.append({
+                "group_id": group_id,
+                "reply_mode": group_config.reply_mode_config.reply_mode
+            })
+
+    if not custom_groups:
+        await reply_mode_list_cmd.send(
+            "📝 当前没有自定义简洁模式的群\n\n"
+            "所有群使用全局默认配置\n\n"
+            f"• 全局默认：{config.reply_mode}\n\n"
+            "使用 /reply_mode_status 查看默认配置"
+        )
+        return
+
+    text = f"✨ 群组简洁模式配置列表 💙\n\n"
+    text += f"全局默认：{config.reply_mode}\n\n"
+    text += "【自定义配置的群】\n\n"
+
+    for group in custom_groups:
+        mode_desc = {
+            "normal": "正常",
+            "concise": "简洁",
+            "detailed": "详细"
+        }
+        text += f"群 {group['group_id']}：{mode_desc.get(group['reply_mode'], group['reply_mode'])}\n"
+
+    text += f"\n💡 提示：使用 /reply_mode_reset <群号> 恢复默认配置"
+
+    await reply_mode_list_cmd.send(text)
 
 
